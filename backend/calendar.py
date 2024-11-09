@@ -1,5 +1,3 @@
-"File that contains the calendar back-end class"
-
 import json
 import datetime
 import os
@@ -10,7 +8,6 @@ class Calendar:
 
     entries_filepath = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "entries.json"))
 
-
     def __init__(self):
         # Load all calendar entries into a dictionary
         with open(self.entries_filepath, "r") as file:
@@ -19,24 +16,34 @@ class Calendar:
     def get_today(self) -> dict[str, str]:
         "Returns the current month and day in a dictionary format; e.g. `{'month': '1', 'day': '1'}`"
         today = datetime.date.today()
-
         return {"month": str(today.month), "day": str(today.day)}
 
-    def get_entry(self, date={"month": None, "day": None}) -> str:
-        """Returns the entry for a given day.
+    def get_entry(self, date={"month": None, "day": None}) -> dict:
+        """Returns the entry for a given day with the theme of the month.
 
         `date`: dictionary containing the specified date. The format should be `{'month': '6', 'day': '24'}`.
 
-        If `month` and `day` are `None`, returns the current day's entry. If `day` is `None` but `month` is specified, returns that month's theme.
+        If `month` and `day` are `None`, returns the current day's entry with the theme.
+        If `day` is `None` but `month` is specified, returns that month's theme.
         """
         today = self.get_today()
 
         if date["month"] is None:
-            return self.entries[today["month"]][today["day"]]
-        elif date["day"] is None:
-            return self.entries[today["month"]]["theme"]
+            month = today["month"]
+            day = today["day"]
         else:
-            return self.entries[date["month"]][date["day"]]
+            month = date["month"]
+            day = date.get("day")
+
+        if day is None:
+            return {
+                "theme": self.entries[month]["theme"]
+            }
+        else:
+            return {
+                "theme": self.entries[month]["theme"],
+                "entry": self.entries[month][day]
+            }
 
     def modify_entry(self, date: dict[str, str], new_entry: str) -> None:
         """Modifies an entry in the `entries.json` file.
@@ -45,7 +52,6 @@ class Calendar:
 
         `new_entry`: str containing the new entry.
         """
-
         # Edit entry in dict
         if date["day"] is None:
             self.entries[date["month"]]["theme"] = new_entry

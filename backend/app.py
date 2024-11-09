@@ -1,5 +1,5 @@
 from flask import Flask, jsonify, request
-from calendar import Calendar  # Assuming your Calendar class is in 'calendar_backend.py'
+from calendar import Calendar  # Adjust the import path if necessary
 
 app = Flask(__name__)
 calendar = Calendar()
@@ -8,23 +8,22 @@ calendar = Calendar()
 def get_entry():
     # Get the 'date' parameter from the request (format: 'M-d')
     date_param = request.args.get('date')
-    
+
     if date_param:
         month, day = date_param.split('-')
         date_dict = {"month": month, "day": day}
     else:
         date_dict = {"month": None, "day": None}
 
-    # Fetch the entry from the Calendar class
-    entry = calendar.get_entry(date_dict)
-    
-    # Return the entry as an array
-    if isinstance(entry, str):
-        return jsonify([entry])
-    elif isinstance(entry, list):
-        return jsonify(entry)
+    # Fetch the entry and theme from the Calendar class
+    entry_data = calendar.get_entry(date_dict)
+
+    # Ensure the response includes both theme and entry
+    if isinstance(entry_data, dict):
+        return jsonify(entry_data)
     else:
-        return jsonify([])
+        # Return an error message if the response is not as expected
+        return jsonify({"error": "Failed to retrieve entry or theme"}), 400
 
 if __name__ == '__main__':
     app.run(port=5000, debug=True)
