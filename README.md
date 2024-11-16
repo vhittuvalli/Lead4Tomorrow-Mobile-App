@@ -14,3 +14,21 @@ Codebase for the development of a calendar app for [Lead4Tomorrow](https://lead4
     }
 }
 ```
+
+## Back-End Profiles Formatting
+```
+{
+    "1": { # User ID
+        "time": "09:00", # Time to send notification
+        "phone": "",
+        "email": "gallium3171@gmail.com",
+        "method": "email" # Notification method (phone, email, push)
+    },
+    "2": {
+        "time": "10:00",
+        "phone": "530-608-4040",
+        "email": "",
+        "method": "phone"
+    },
+}
+```
