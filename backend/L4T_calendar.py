@@ -3,10 +3,12 @@ import datetime
 import os
 
 
-class Calendar:
+class L4T_Calendar:
     "Contains functions used for the calendar app back-end"
 
-    entries_filepath = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "entries.json"))
+    entries_filepath = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "..", "data", "entries.json")
+    )
 
     def __init__(self):
         # Load all calendar entries into a dictionary
@@ -36,13 +38,11 @@ class Calendar:
             day = date.get("day")
 
         if day is None:
-            return {
-                "theme": self.entries[month]["theme"]
-            }
+            return {"theme": self.entries[month]["theme"]}
         else:
             return {
                 "theme": self.entries[month]["theme"],
-                "entry": self.entries[month][day]
+                "entry": self.entries[month][day],
             }
 
     def modify_entry(self, date: dict[str, str], new_entry: str) -> None:

@@ -1,16 +1,17 @@
 from flask import Flask, jsonify, request
-from calendar import Calendar  # Adjust the import path if necessary
+from L4T_calendar import L4T_Calendar  # Adjust the import path if necessary
 
 app = Flask(__name__)
-calendar = Calendar()
+calendar = L4T_Calendar()
 
-@app.route('/get_entry', methods=['GET'])
+
+@app.route("/get_entry", methods=["GET"])
 def get_entry():
     # Get the 'date' parameter from the request (format: 'M-d')
-    date_param = request.args.get('date')
+    date_param = request.args.get("date")
 
     if date_param:
-        month, day = date_param.split('-')
+        month, day = date_param.split("-")
         date_dict = {"month": month, "day": day}
     else:
         date_dict = {"month": None, "day": None}
@@ -25,5 +26,6 @@ def get_entry():
         # Return an error message if the response is not as expected
         return jsonify({"error": "Failed to retrieve entry or theme"}), 400
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     app.run(port=5000, debug=True)
