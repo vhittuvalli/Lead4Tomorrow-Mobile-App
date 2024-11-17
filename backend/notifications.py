@@ -21,7 +21,7 @@ def get_profiles():
             with open(
                 os.path.abspath(
                     os.path.join(
-                        os.path.dirname(__file__), "..", "data", "profiles.json"
+                        os.path.dirname(__file__), "..", "storage", "profiles.json"
                     )
                 ),
                 "r",
@@ -34,6 +34,12 @@ def get_profiles():
 # TODO: add Lead4Tomorrow's account info here
 username = "scoutingtmobile@gmail.com"
 password = "bffo pepe ftcd fgyq"  # Needs to be the google "App Password", enable 2FA then make a new app password
+CARRIERS = {
+    "att": "@mms.att.net",
+    "tmobile": "@tmomail.net",
+    "verizon": "@vtext.com",
+    "sprint": "@messaging.sprintpcs.com",
+}
 
 
 def send_email(to_email: str, subject: str, body: str) -> None:
@@ -56,6 +62,35 @@ def send_email(to_email: str, subject: str, body: str) -> None:
     print(f"Email sent to {to_email}")
 
 
+def send_text(to_number: str, carrier: str, subject: str, body: str) -> None:
+    """Sends a text to the specified phone number.
+
+    `to_number`: mobile number to send to
+
+    `carrier`: mobile carrier ("att", "tmobile", "verizon", "sprint")
+
+    `subject`: text subject
+
+    `body`: text content
+    """
+    print(f"Sending text to {to_number}...")
+
+    try:
+        with smtplib.SMTP("smtp.gmail.com", 587, timeout=120) as smtp:
+            smtp.starttls()
+            smtp.login(username, password)
+            smtp.sendmail(
+                username,
+                f"{to_number}{CARRIERS[carrier]}",
+                f"Subject: {subject}\n\n\n{body}",
+            )
+    except Exception as err:
+        print(f"Text failed to send: {err}")
+    print(f"Text sent to {to_number}")
+
+
+print("Starting notifications script...")
+
 sent_days = {i: dict() for i in get_profiles().keys()}
 
 # Loop forever and send notifications at the right time
@@ -74,7 +109,8 @@ while True:
                 today_long = calendar.get_today(profile["timezone"], True)
                 entry_dict = calendar.get_entry(today_short)
 
-                message = f"""We hope this email finds you well!
+                subject = f"Lead4Tomorrow Calendar {today_short["month"]}/{today_short["day"]}"
+                message = f"""We hope this message finds you well!
 
 {today_long["month"]} is {entry_dict["theme"]}.
 
@@ -88,16 +124,15 @@ Lead4Tomorrow
                 if profile["method"] == "email":
                     send_email(
                         profile["email"],
-                        f"Lead4Tomorrow Calendar {today_short["month"]}/{today_short["day"]}",
+                        subject,
                         message,
                     )
-
-                    # Update latest sent day
-                    sent_days[i] = today_short
                 # Send text
                 elif profile["method"] == "text":
-                    continue
+                    send_text(profile["phone"], profile["carrier"], subject, message)
 
+                # Update latest sent day
+                sent_days[i] = today_short
                 print(f"Sent {profile["method"]} notification to user {i}")
         # Loop cannot crash
         except Exception as err:

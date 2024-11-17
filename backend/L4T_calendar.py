@@ -1,14 +1,13 @@
 import json
 import datetime
 import os
-import pytz
 
 
 class L4T_Calendar:
     "Contains functions used for the calendar app back-end"
 
     entries_filepath = os.path.abspath(
-        os.path.join(os.path.dirname(__file__), "..", "data", "entries.json")
+        os.path.join(os.path.dirname(__file__), "..", "storage", "entries.json")
     )
 
     def __init__(self):

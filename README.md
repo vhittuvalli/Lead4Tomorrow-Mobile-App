@@ -22,6 +22,7 @@ Codebase for the development of a calendar app for [Lead4Tomorrow](https://lead4
         "time": "09:00", # Time to send notification
         "time_zone": -8, # Hour difference from UTC
         "phone": "",
+        "carrier": "att", # Phone carrier 
         "email": "johndoe123@gmail.com",
         "method": "email" # Notification method (text, email, push)
     },
