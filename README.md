@@ -20,15 +20,17 @@ Codebase for the development of a calendar app for [Lead4Tomorrow](https://lead4
 {
     "1": { # User ID
         "time": "09:00", # Time to send notification
+        "time_zone": -8, # Hour difference from UTC
         "phone": "",
         "email": "johndoe123@gmail.com",
-        "method": "email" # Notification method (phone, email, push)
+        "method": "email" # Notification method (text, email, push)
     },
     "2": {
         "time": "10:00",
+        "timezone": -5,
         "phone": "784-239-2938",
         "email": "",
-        "method": "phone"
+        "method": "text"
     },
 }
 ```
