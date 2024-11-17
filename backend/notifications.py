@@ -9,8 +9,13 @@ import os
 # from email.mime.multipart import MIMEMultipart
 import smtplib
 from L4T_calendar import L4T_Calendar
+import logging
+import utils
 
 calendar = L4T_Calendar()
+
+log = logging.getLogger(__name__)
+utils.config_log()
 
 
 def get_profiles():
@@ -19,11 +24,7 @@ def get_profiles():
     while True:
         try:
             with open(
-                os.path.abspath(
-                    os.path.join(
-                        os.path.dirname(__file__), "..", "storage", "profiles.json"
-                    )
-                ),
+                utils.create_path("storage", "profiles.json"),
                 "r",
             ) as f:
                 return json.load(f)
@@ -51,15 +52,15 @@ def send_email(to_email: str, subject: str, body: str) -> None:
 
     `body`: email body
     """
-    print(f"Sending email to {to_email}...")
+    log.info(f"Sending email to {to_email}...")
     try:
         with smtplib.SMTP("smtp.gmail.com", 587, timeout=120) as smtp:
             smtp.starttls()
             smtp.login(username, password)
             smtp.sendmail(username, to_email, f"Subject: {subject}\n\n{body}")
     except Exception as err:
-        print(f"Email failed to send: {err}")
-    print(f"Email sent to {to_email}")
+        log.error(f"Email failed to send: {err}")
+    log.info(f"Email sent to {to_email}")
 
 
 def send_text(to_number: str, carrier: str, subject: str, body: str) -> None:
@@ -73,7 +74,7 @@ def send_text(to_number: str, carrier: str, subject: str, body: str) -> None:
 
     `body`: text content
     """
-    print(f"Sending text to {to_number}...")
+    log.info(f"Sending text to {to_number}...")
 
     try:
         with smtplib.SMTP("smtp.gmail.com", 587, timeout=120) as smtp:
@@ -85,8 +86,8 @@ def send_text(to_number: str, carrier: str, subject: str, body: str) -> None:
                 f"Subject: {subject}\n\n\n{body}",
             )
     except Exception as err:
-        print(f"Text failed to send: {err}")
-    print(f"Text sent to {to_number}")
+        log.error(f"Text failed to send: {err}")
+    log.info(f"Text sent to {to_number}")
 
 
 print("Starting notifications script...")
@@ -104,7 +105,7 @@ while True:
                 and (today_short := calendar.get_today(profile["timezone"]))
                 != sent_days[i]
             ):
-                print(f"Sending {profile["method"]} notification to user {i}...")
+                log.info(f"Sending {profile["method"]} notification to user {i}...")
 
                 today_long = calendar.get_today(profile["timezone"], True)
                 entry_dict = calendar.get_entry(today_short)
@@ -133,9 +134,8 @@ Lead4Tomorrow
 
                 # Update latest sent day
                 sent_days[i] = today_short
-                print(f"Sent {profile["method"]} notification to user {i}")
+                log.info(f"Sent {profile["method"]} notification to user {i}")
         # Loop cannot crash
         except Exception as err:
-            # TODO: add log somewhere
-            print(f"Error: {err}")
+            log.critical(f"notifications.py main loop crashed: {err}")
             continue

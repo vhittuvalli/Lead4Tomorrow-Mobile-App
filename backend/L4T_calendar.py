@@ -1,14 +1,16 @@
 import json
 import datetime
-import os
+import utils
+import logging
+
+log = logging.getLogger(__name__)
+utils.config_log()
 
 
 class L4T_Calendar:
     "Contains functions used for the calendar app back-end"
 
-    entries_filepath = os.path.abspath(
-        os.path.join(os.path.dirname(__file__), "..", "storage", "entries.json")
-    )
+    entries_filepath = utils.create_path("storage", "entries.json")
 
     def __init__(self):
         # Load all calendar entries into a dictionary
@@ -38,24 +40,24 @@ class L4T_Calendar:
         else:
             return {"month": today.strftime("%B"), "day": today.strftime("%A")}
 
-    def get_entry(self, date={"month": None, "day": None}) -> dict:
+    def get_entry(self, date) -> dict:
         """Returns the entry for a given day with the theme of the month.
 
         `date`: dictionary containing the specified date. The format should be `{'month': '6', 'day': '24'}`.
 
         If `day` is `None` but `month` is specified, returns that month's theme.
         """
-        # Make sure input date is valid
-        if (date["month"] is None and date["day"] is None) or date["month"] is None:
+        try:
+            if date["day"] is None:
+                return {"theme": self.entries[date["month"]]["theme"]}
+            else:
+                return {
+                    "theme": self.entries[date["month"]]["theme"],
+                    "entry": self.entries[date["month"]][date["day"]],
+                }
+        except Exception as err:
+            log.critical(f"`get_entry` failed with input {date=}: {err}")
             return {"theme": "", "entry": ""}
-
-        if date["day"] is None:
-            return {"theme": self.entries[date["month"]]["theme"]}
-        else:
-            return {
-                "theme": self.entries[date["month"]]["theme"],
-                "entry": self.entries[date["month"]][date["day"]],
-            }
 
     def modify_entry(self, date: dict[str, str], new_entry: str) -> None:
         """Modifies an entry in the `entries.json` file.
@@ -73,3 +75,8 @@ class L4T_Calendar:
         # Write to JSON file
         with open(self.entries_filepath, "w") as file:
             file.write(json.dumps(self.entries, indent=4))
+
+
+if __name__ == "__main__":
+    log = logging.getLogger(__name__)
+    logging.basicConfig(filename=utils.create_log_path(__file__), level=logging.INFO)
