@@ -55,11 +55,6 @@
 			path = backups;
 			sourceTree = "<group>";
 		};
-		8BB400962CE0140600DF3B78 /* data */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = data;
-			sourceTree = "<group>";
-		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -90,7 +85,6 @@
 		8BB4004A2CE005CE00DF3B78 = {
 			isa = PBXGroup;
 			children = (
-				8BB400962CE0140600DF3B78 /* data */,
 				8BB4008F2CE013CA00DF3B78 /* backups */,
 				8BB400862CE0135400DF3B78 /* backend */,
 				8BB400552CE005CE00DF3B78 /* Lead4Tomorrow Calendar App */,
@@ -129,7 +123,6 @@
 				8BB400552CE005CE00DF3B78 /* Lead4Tomorrow Calendar App */,
 				8BB400862CE0135400DF3B78 /* backend */,
 				8BB4008F2CE013CA00DF3B78 /* backups */,
-				8BB400962CE0140600DF3B78 /* data */,
 			);
 			name = "Lead4Tomorrow Calendar App";
 			packageProductDependencies = (

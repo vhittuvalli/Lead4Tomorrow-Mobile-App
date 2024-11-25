@@ -1,26 +1,27 @@
-"File that holds utility functions for the back-end"
-
 import os
 import logging
 
-
 def create_path(*local_paths: str) -> str:
-    """Creates a path to ~/Lead4Tomorrow-Mobile-App/<local paths>
+    """Creates a path relative to the current folder.
 
-    `local_paths`: folders or files to append to path, e.g. `"backend"`, `"notifications.py"`; same functionality as `os.path.join`
+    `local_paths`: folders or files to append to path, e.g. `"logs"`, `"notifications.py"`.
     """
     return os.path.abspath(os.path.join(*local_paths))
 
-
 def create_log_path(log_file: str):
-    """Creates a logfing filepath to be passed into `logging.basicConfig`
+    """Creates a logging filepath to be passed into `logging.basicConfig`.
 
     `log_file`: pass `__file__` into the function.
     """
-    return create_path("backend", "logs", f"{os.path.basename(log_file)[:-3]}.log")
-
+    return create_path("logs", f"{os.path.basename(log_file)[:-3]}.log")
 
 def config_log():
+    """Configures the logging system."""
+    log_dir = create_path("logs")  # Path to the logs directory
+    os.makedirs(log_dir, exist_ok=True)  # Ensure the logs directory exists
+
     logging.basicConfig(
-        filename=create_path("backend", "logs", f"backend.log"), level=logging.INFO
+        filename=create_path("logs", "backend.log"),  # Log file path
+        level=logging.INFO,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
