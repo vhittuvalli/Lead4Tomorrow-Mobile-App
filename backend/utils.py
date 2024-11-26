@@ -20,8 +20,22 @@ def config_log():
     log_dir = create_path("logs")  # Path to the logs directory
     os.makedirs(log_dir, exist_ok=True)  # Ensure the logs directory exists
 
+    log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    log_level = logging.DEBUG  # Set to DEBUG for detailed logs
+
+    # File Handler
+    file_handler = logging.FileHandler(create_path("logs", "backend.log"))
+    file_handler.setLevel(log_level)
+    file_handler.setFormatter(logging.Formatter(log_format))
+
+    # Console Handler
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(log_level)
+    console_handler.setFormatter(logging.Formatter(log_format))
+
+    # Configure the logger with both handlers
     logging.basicConfig(
-        filename=create_path("logs", "backend.log"),  # Log file path
-        level=logging.INFO,
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        level=log_level,
+        handlers=[file_handler, console_handler],
     )
+
