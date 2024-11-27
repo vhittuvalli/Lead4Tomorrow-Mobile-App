@@ -1,19 +1,18 @@
 {
-    "1": {
-        "time": "11:55",
-        "timezone": -8,
-        "phone": "5306084040",
-        "carrier": "tmobile",
-        "email": "gallium3171@gmail.com",
-        "method": "text"
-    },
-    "2": {
-        "time": "15:30",
-        "timezone": -8,
-        "phone": "4696685075",
-        "carrier": "tmobile",
-        "email": "vhittuvalli@gmail.com",
-        "method": "email"
-    }
-    
+  "1" : {
+    "timezone" : -8,
+    "phone" : "5306084040",
+    "email" : "gallium3171@gmail.com",
+    "method" : "text",
+    "carrier" : "tmobile",
+    "time" : "11:55"
+  },
+  "2" : {
+    "carrier" : "att",
+    "method" : "text",
+    "time" : "22:20",
+    "email" : "vhittuvalli@gmail.com",
+    "phone" : "4696685075",
+    "timezone" : -6
+  }
 }

@@ -3,58 +3,101 @@ import UserNotifications
 
 struct SettingsPageView: View {
     @State private var isNotificationsEnabled = false
-    @State private var selectedTime = Date()
-    @State private var isPickerExpanded = false
-    @State private var theme: String = ""
-    @State private var dailyMessage: String = ""
+    @State private var email: String = ""
+    @State private var phoneNumber: String = ""
+    @State private var carrier: String = "att" // Default carrier
+    @State private var preferredMethod: String = "Email"
+    @State private var selectedTimezone: String = "America/New_York" // Default to Eastern Time
+    @State private var notificationTime = Date()
+
+    @State private var isProfileCollapsed = false // Controls collapsibility
+
+    private let carriers = ["att", "tmobile", "verizon", "sprint"]
+    private let americanTimezones = [
+        ("America/New_York", "Eastern Time (ET)"),
+        ("America/Chicago", "Central Time (CT)"),
+        ("America/Denver", "Mountain Time (MT)"),
+        ("America/Phoenix", "Mountain Time - Arizona (MT)"),
+        ("America/Los_Angeles", "Pacific Time (PT)"),
+        ("America/Anchorage", "Alaska Time (AKT)"),
+        ("Pacific/Honolulu", "Hawaii-Aleutian Time (HAT)")
+    ]
+    private let profilesFileAbsolutePath = "/Users/varun/Desktop/Coding/Lead4Tomorrow-Mobile-App/backend/storage/profiles.json"
 
     var body: some View {
         NavigationView {
             Form {
-                Section(header: Text("Settings")) {
+                Section(header: Text("Notifications")) {
                     Toggle("Enable Notifications", isOn: $isNotificationsEnabled)
                         .onChange(of: isNotificationsEnabled) { value in
-                            if value {
-                                requestNotificationAuthorization()
-                                fetchEntries { theme, message in
-                                    self.theme = theme
-                                    self.dailyMessage = message
-                                    scheduleNotification(at: selectedTime, theme: theme, message: message)
-                                }
-                            } else {
+                            if !value {
                                 UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
-                                isPickerExpanded = false
+                                resetFields()
                             }
                         }
 
                     if isNotificationsEnabled {
-                        Button(action: {
-                            withAnimation {
-                                isPickerExpanded.toggle()
-                            }
-                        }) {
-                            HStack {
-                                Text("Notification Time")
-                                Spacer()
-                                Text("\(formattedTime(selectedTime))")
+                        if isProfileCollapsed {
+                            // Collapsed View of Profile Information
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Notification Time: \(formattedTime(notificationTime))")
+                                    .font(.subheadline)
+                                    .foregroundColor(.gray)
+                                Text("Method: \(preferredMethod)")
+                                    .font(.subheadline)
+                                    .foregroundColor(.gray)
+                                Text("Email: \(email)")
+                                    .font(.subheadline)
+                                    .foregroundColor(.gray)
+                                Text("Phone: \(phoneNumber) (\(carrier.capitalized))")
+                                    .font(.subheadline)
+                                    .foregroundColor(.gray)
+                                Text("Timezone: UTC \(utcOffset(for: selectedTimezone))")
+                                    .font(.subheadline)
                                     .foregroundColor(.gray)
                             }
-                        }
+                        } else {
+                            // Editable Fields for Profile Information
+                            Picker("Preferred Method", selection: $preferredMethod) {
+                                Text("Email").tag("Email")
+                                Text("Text").tag("Text")
+                            }
+                            .pickerStyle(SegmentedPickerStyle())
 
-                        if isPickerExpanded {
                             DatePicker(
-                                "Select Time",
-                                selection: $selectedTime,
+                                "Notification Time",
+                                selection: $notificationTime,
                                 displayedComponents: .hourAndMinute
                             )
                             .datePickerStyle(WheelDatePickerStyle())
-                            .onChange(of: selectedTime) { newDate in
-                                fetchEntries { theme, message in
-                                    self.theme = theme
-                                    self.dailyMessage = message
-                                    scheduleNotification(at: newDate, theme: theme, message: message)
+
+                            TextField("Enter Email", text: $email)
+                                .keyboardType(.emailAddress)
+                                .autocapitalization(.none)
+                                .disableAutocorrection(true)
+                                .padding()
+                                .background(RoundedRectangle(cornerRadius: 8).stroke(Color.gray, lineWidth: 1))
+
+                            TextField("Enter Phone Number", text: $phoneNumber)
+                                .keyboardType(.phonePad)
+                                .padding()
+                                .background(RoundedRectangle(cornerRadius: 8).stroke(Color.gray, lineWidth: 1))
+
+                            Picker("Select Timezone", selection: $selectedTimezone) {
+                                ForEach(americanTimezones, id: \.0) { timeZone in
+                                    Text(timeZone.1).tag(timeZone.0)
                                 }
                             }
+                            .pickerStyle(WheelPickerStyle())
+                        }
+
+                        Button(action: saveProfile) {
+                            Text(isProfileCollapsed ? "Edit Profile" : "Save Profile")
+                                .foregroundColor(.white)
+                                .padding()
+                                .background(isProfileCollapsed ? Color.orange : Color.blue)
+                                .cornerRadius(8)
+                                .frame(maxWidth: .infinity)
                         }
                     }
                 }
@@ -63,10 +106,68 @@ struct SettingsPageView: View {
         }
     }
 
+    // MARK: - Helper Methods
+
+    private func saveProfile() {
+        guard !email.isEmpty, !phoneNumber.isEmpty else {
+            print("Email and phone number are required.")
+            return
+        }
+
+        let profile: [String: Any] = [
+            "time": formattedTime(notificationTime),
+            "timezone": utcOffset(for: selectedTimezone), // Save UTC offset
+            "phone": phoneNumber,
+            "carrier": carrier,
+            "email": email,
+            "method": preferredMethod.lowercased()
+        ]
+
+        var profiles = loadProfiles()
+
+        // Check for duplicates by email or phone number
+        if let existingKey = profiles.first(where: {
+            ($0.value["email"] as? String) == email || ($0.value["phone"] as? String) == phoneNumber
+        })?.key {
+            // Update existing profile
+            profiles[existingKey] = profile
+        } else {
+            // Create new profile
+            let newKey = String(profiles.count + 1)
+            profiles[newKey] = profile
+        }
+
+        saveProfiles(profiles)
+        isProfileCollapsed.toggle() // Collapse the fields
+        print("Profile saved/updated successfully.")
+    }
+
+    private func resetFields() {
+        isProfileCollapsed = false
+        email = ""
+        phoneNumber = ""
+        carrier = "att"
+        preferredMethod = "Email"
+        selectedTimezone = "America/New_York" // Reset to default
+        notificationTime = Date()
+    }
+
     private func formattedTime(_ date: Date) -> String {
         let formatter = DateFormatter()
-        formatter.timeStyle = .short
+        formatter.dateFormat = "HH:mm"
         return formatter.string(from: date)
+    }
+
+    private func utcOffset(for timeZoneIdentifier: String) -> Int {
+        guard let timeZone = TimeZone(identifier: timeZoneIdentifier) else { return 0 }
+        return timeZone.secondsFromGMT() / 3600
+    }
+
+    private func displayName(for timeZoneIdentifier: String) -> String {
+        guard let timeZone = americanTimezones.first(where: { $0.0 == timeZoneIdentifier }) else {
+            return "Unknown Timezone"
+        }
+        return timeZone.1
     }
 
     private func requestNotificationAuthorization() {
@@ -79,44 +180,33 @@ struct SettingsPageView: View {
         }
     }
 
-    private func scheduleNotification(at date: Date, theme: String, message: String) {
-        let content = UNMutableNotificationContent()
-        content.title = theme.isEmpty ? "Daily Reminder" : theme
-        content.body = message.isEmpty ? "Don't forget to check your daily message!" : message
-        content.sound = UNNotificationSound.default
+    // MARK: - File Handling
 
-        var dateComponents = Calendar.current.dateComponents([.hour, .minute], from: date)
-        dateComponents.second = 0  // Optional, to schedule on the minute
+    private func loadProfiles() -> [String: [String: Any]] {
+        let profilesURL = getProfilesURL()
+        guard let data = try? Data(contentsOf: profilesURL),
+              let profiles = try? JSONSerialization.jsonObject(with: data) as? [String: [String: Any]] else {
+            return [:]
+        }
+        return profiles
+    }
 
-        let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: false)
-
-        let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: trigger)
-
-        UNUserNotificationCenter.current().add(request) { error in
-            if let error = error {
-                print("Failed to schedule notification: \(error)")
-            }
+    private func saveProfiles(_ profiles: [String: [String: Any]]) {
+        let profilesURL = getProfilesURL()
+        guard let data = try? JSONSerialization.data(withJSONObject: profiles, options: .prettyPrinted) else {
+            print("Failed to serialize profiles to JSON.")
+            return
+        }
+        do {
+            try data.write(to: profilesURL)
+        } catch {
+            print("Failed to write profiles to file: \(error)")
         }
     }
 
-    private func fetchEntries(completion: @escaping (String, String) -> Void) {
-        guard let url = URL(string: "http://localhost:5000/get_entry") else { return }
-
-        URLSession.shared.dataTask(with: url) { data, response, error in
-            if let data = data {
-                if let decodedResponse = try? JSONDecoder().decode([String: String].self, from: data) {
-                    DispatchQueue.main.async {
-                        let theme = decodedResponse["theme"] ?? "No theme available"
-                        let message = decodedResponse["entry"] ?? "No entry available"
-                        completion(theme, message)
-                    }
-                } else {
-                    print("Failed to decode the response.")
-                }
-            } else if let error = error {
-                print("Error fetching entries: \(error)")
-            }
-        }.resume()
+    private func getProfilesURL() -> URL {
+        // Use the provided absolute path to `profiles.json`
+        return URL(fileURLWithPath: profilesFileAbsolutePath)
     }
 }
 
