@@ -1,18 +1,10 @@
 {
-  "1" : {
-    "timezone" : -8,
-    "phone" : "5306084040",
-    "email" : "gallium3171@gmail.com",
-    "method" : "text",
-    "carrier" : "tmobile",
-    "time" : "11:55"
-  },
-  "2" : {
-    "carrier" : "att",
-    "method" : "text",
-    "time" : "22:20",
-    "email" : "vhittuvalli@gmail.com",
+  "vhittuvalli@gmail.com" : {
     "phone" : "4696685075",
-    "timezone" : -6
+    "password" : "Varun0915",
+    "carrier" : "att",
+    "timezone" : -6,
+    "method" : "email",
+    "time" : "18:03"
   }
 }

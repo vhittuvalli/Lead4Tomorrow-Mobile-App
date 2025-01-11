@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct HomePageView: View {
+    @Binding var loggedInEmail: String
+
     @State private var selectedDate = Date()
     @State private var entries: [String] = []
     @State private var theme: String = ""
@@ -93,8 +95,10 @@ struct HomePageView: View {
 }
 
 struct HomePageView_Previews: PreviewProvider {
+    @State static var testEmail = "test@example.com"
+
     static var previews: some View {
-        HomePageView()
+        HomePageView(loggedInEmail: $testEmail)
     }
 }
 

@@ -1,6 +1,7 @@
 import json
 import os
 import smtplib
+import time
 from L4T_calendar import L4T_Calendar
 import logging
 import utils
@@ -70,19 +71,19 @@ while True:
     profiles = get_profiles()
     log.debug(f"Loaded profiles: {profiles}")
 
-    for i, profile in profiles.items():
+    for profile_email, profile in profiles.items():
         try:
-            log.debug(f"Processing profile {i}: {profile}")
+            log.debug(f"Processing profile {profile_email}: {profile}")
 
             # Get the current time and today's date
             current_time = calendar.get_curr_time(profile["timezone"]).strftime("%H:%M")
             today_short = calendar.get_today(profile["timezone"])
             log.debug(f"Current time: {current_time}, Notification time: {profile['time']}")
-            log.debug(f"Today's date: {today_short}, Last sent: {sent_days.get(i)}")
+            log.debug(f"Today's date: {today_short}, Last sent: {sent_days.get(profile_email)}")
 
             # Check if it's time to send the notification
-            if profile["time"] == current_time and today_short != sent_days[i]:
-                log.info(f"Sending {profile['method']} notification to user {i}...")
+            if profile["time"] == current_time and today_short != sent_days[profile_email]:
+                log.info(f"Sending {profile['method']} notification to user {profile_email}...")
 
                 today_long = calendar.get_today(profile["timezone"], True)
                 entry_dict = calendar.get_entry(today_short)
@@ -101,14 +102,17 @@ Lead4Tomorrow
 
                 # Send email or text
                 if profile["method"] == "email":
-                    send_email(profile["email"], subject, message)
+                    send_email(profile_email, subject, message)
                 elif profile["method"] == "text":
                     send_text(profile["phone"], profile["carrier"], subject, message)
 
                 # Update the sent day
-                sent_days[i] = today_short
-                log.info(f"Sent {profile['method']} notification to user {i}")
+                sent_days[profile_email] = today_short
+                log.info(f"Sent {profile['method']} notification to user {profile_email}")
 
         except Exception as err:
-            log.critical(f"Error processing profile {i}: {err}")
+            log.critical(f"Error processing profile {profile_email}: {err}")
             continue
+    
+    # Pause the loop for one minute
+    time.sleep(60)

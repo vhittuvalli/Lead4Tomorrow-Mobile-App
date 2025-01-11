@@ -2,15 +2,19 @@ import SwiftUI
 import UserNotifications
 
 struct SettingsPageView: View {
-    @State private var isNotificationsEnabled = false
+    let loggedInEmail: String
+
+    @State private var profiles: [String: [String: Any]] = [:]
     @State private var email: String = ""
     @State private var phoneNumber: String = ""
-    @State private var carrier: String = "att" // Default carrier
+    @State private var carrier: String = "att"
     @State private var preferredMethod: String = "Email"
-    @State private var selectedTimezone: String = "America/New_York" // Default to Eastern Time
+    @State private var selectedTimezone: String = "America/New_York"
     @State private var notificationTime = Date()
+    @State private var isNotificationsEnabled = false
+    @State private var isProfileCollapsed = false
 
-    @State private var isProfileCollapsed = false // Controls collapsibility
+    private let profilesFilePath = "/Users/varun/Desktop/Coding/Lead4Tomorrow-Mobile-App/backend/storage/profiles.json"
 
     private let carriers = ["att", "tmobile", "verizon", "sprint"]
     private let americanTimezones = [
@@ -22,7 +26,6 @@ struct SettingsPageView: View {
         ("America/Anchorage", "Alaska Time (AKT)"),
         ("Pacific/Honolulu", "Hawaii-Aleutian Time (HAT)")
     ]
-    private let profilesFileAbsolutePath = "/Users/varun/Desktop/Coding/Lead4Tomorrow-Mobile-App/backend/storage/profiles.json"
 
     var body: some View {
         NavigationView {
@@ -38,26 +41,14 @@ struct SettingsPageView: View {
 
                     if isNotificationsEnabled {
                         if isProfileCollapsed {
-                            // Collapsed View of Profile Information
                             VStack(alignment: .leading, spacing: 8) {
                                 Text("Notification Time: \(formattedTime(notificationTime))")
-                                    .font(.subheadline)
-                                    .foregroundColor(.gray)
                                 Text("Method: \(preferredMethod)")
-                                    .font(.subheadline)
-                                    .foregroundColor(.gray)
                                 Text("Email: \(email)")
-                                    .font(.subheadline)
-                                    .foregroundColor(.gray)
                                 Text("Phone: \(phoneNumber) (\(carrier.capitalized))")
-                                    .font(.subheadline)
-                                    .foregroundColor(.gray)
                                 Text("Timezone: UTC \(utcOffset(for: selectedTimezone))")
-                                    .font(.subheadline)
-                                    .foregroundColor(.gray)
                             }
                         } else {
-                            // Editable Fields for Profile Information
                             Picker("Preferred Method", selection: $preferredMethod) {
                                 Text("Email").tag("Email")
                                 Text("Text").tag("Text")
@@ -69,26 +60,15 @@ struct SettingsPageView: View {
                                 selection: $notificationTime,
                                 displayedComponents: .hourAndMinute
                             )
-                            .datePickerStyle(WheelDatePickerStyle())
-
-                            TextField("Enter Email", text: $email)
-                                .keyboardType(.emailAddress)
-                                .autocapitalization(.none)
-                                .disableAutocorrection(true)
-                                .padding()
-                                .background(RoundedRectangle(cornerRadius: 8).stroke(Color.gray, lineWidth: 1))
 
                             TextField("Enter Phone Number", text: $phoneNumber)
                                 .keyboardType(.phonePad)
-                                .padding()
-                                .background(RoundedRectangle(cornerRadius: 8).stroke(Color.gray, lineWidth: 1))
 
                             Picker("Select Timezone", selection: $selectedTimezone) {
                                 ForEach(americanTimezones, id: \.0) { timeZone in
                                     Text(timeZone.1).tag(timeZone.0)
                                 }
                             }
-                            .pickerStyle(WheelPickerStyle())
                         }
 
                         Button(action: saveProfile) {
@@ -97,59 +77,64 @@ struct SettingsPageView: View {
                                 .padding()
                                 .background(isProfileCollapsed ? Color.orange : Color.blue)
                                 .cornerRadius(8)
-                                .frame(maxWidth: .infinity)
                         }
                     }
                 }
             }
             .navigationTitle("Settings")
+            .onAppear {
+                loadProfile()
+            }
         }
     }
 
-    // MARK: - Helper Methods
-
     private func saveProfile() {
-        guard !email.isEmpty, !phoneNumber.isEmpty else {
-            print("Email and phone number are required.")
-            return
-        }
+        guard var profile = profiles[loggedInEmail] else { return }
 
-        let profile: [String: Any] = [
-            "time": formattedTime(notificationTime),
-            "timezone": utcOffset(for: selectedTimezone), // Save UTC offset
-            "phone": phoneNumber,
-            "carrier": carrier,
-            "email": email,
-            "method": preferredMethod.lowercased()
-        ]
+        profile["time"] = formattedTime(notificationTime)
+        profile["timezone"] = utcOffset(for: selectedTimezone)
+        profile["phone"] = phoneNumber
+        profile["carrier"] = carrier
+        profile["method"] = preferredMethod.lowercased()
 
-        var profiles = loadProfiles()
-
-        // Check for duplicates by email or phone number
-        if let existingKey = profiles.first(where: {
-            ($0.value["email"] as? String) == email || ($0.value["phone"] as? String) == phoneNumber
-        })?.key {
-            // Update existing profile
-            profiles[existingKey] = profile
-        } else {
-            // Create new profile
-            let newKey = String(profiles.count + 1)
-            profiles[newKey] = profile
-        }
-
+        profiles[loggedInEmail] = profile
         saveProfiles(profiles)
-        isProfileCollapsed.toggle() // Collapse the fields
-        print("Profile saved/updated successfully.")
+        isProfileCollapsed.toggle()
     }
 
     private func resetFields() {
-        isProfileCollapsed = false
-        email = ""
         phoneNumber = ""
         carrier = "att"
         preferredMethod = "Email"
-        selectedTimezone = "America/New_York" // Reset to default
+        selectedTimezone = "America/New_York"
         notificationTime = Date()
+        isProfileCollapsed = false
+    }
+
+    private func loadProfile() {
+        profiles = loadProfiles() ?? [:]
+        guard let profile = profiles[loggedInEmail] else { return }
+
+        email = loggedInEmail
+        phoneNumber = profile["phone"] as? String ?? ""
+        carrier = profile["carrier"] as? String ?? "att"
+        preferredMethod = profile["method"] as? String ?? "Email"
+        selectedTimezone = americanTimezones.first(where: { utcOffset(for: $0.0) == (profile["timezone"] as? Int ?? 0) })?.0 ?? "America/New_York"
+        notificationTime = parseTimeString(profile["time"] as? String ?? "09:00")
+        isNotificationsEnabled = true
+    }
+
+    private func saveProfiles(_ profiles: [String: [String: Any]]) {
+        let profilesURL = URL(fileURLWithPath: profilesFilePath)
+        guard let data = try? JSONSerialization.data(withJSONObject: profiles, options: .prettyPrinted) else { return }
+        try? data.write(to: profilesURL)
+    }
+
+    private func loadProfiles() -> [String: [String: Any]]? {
+        let profilesURL = URL(fileURLWithPath: profilesFilePath)
+        guard let data = try? Data(contentsOf: profilesURL),
+              let profiles = try? JSONSerialization.jsonObject(with: data) as? [String: [String: Any]] else { return nil }
+        return profiles
     }
 
     private func formattedTime(_ date: Date) -> String {
@@ -158,61 +143,21 @@ struct SettingsPageView: View {
         return formatter.string(from: date)
     }
 
+    private func parseTimeString(_ timeString: String) -> Date {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm"
+        return formatter.date(from: timeString) ?? Date()
+    }
+
     private func utcOffset(for timeZoneIdentifier: String) -> Int {
         guard let timeZone = TimeZone(identifier: timeZoneIdentifier) else { return 0 }
         return timeZone.secondsFromGMT() / 3600
-    }
-
-    private func displayName(for timeZoneIdentifier: String) -> String {
-        guard let timeZone = americanTimezones.first(where: { $0.0 == timeZoneIdentifier }) else {
-            return "Unknown Timezone"
-        }
-        return timeZone.1
-    }
-
-    private func requestNotificationAuthorization() {
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
-            if granted {
-                print("Permission granted for notifications.")
-            } else if let error = error {
-                print("Error requesting notifications permission: \(error)")
-            }
-        }
-    }
-
-    // MARK: - File Handling
-
-    private func loadProfiles() -> [String: [String: Any]] {
-        let profilesURL = getProfilesURL()
-        guard let data = try? Data(contentsOf: profilesURL),
-              let profiles = try? JSONSerialization.jsonObject(with: data) as? [String: [String: Any]] else {
-            return [:]
-        }
-        return profiles
-    }
-
-    private func saveProfiles(_ profiles: [String: [String: Any]]) {
-        let profilesURL = getProfilesURL()
-        guard let data = try? JSONSerialization.data(withJSONObject: profiles, options: .prettyPrinted) else {
-            print("Failed to serialize profiles to JSON.")
-            return
-        }
-        do {
-            try data.write(to: profilesURL)
-        } catch {
-            print("Failed to write profiles to file: \(error)")
-        }
-    }
-
-    private func getProfilesURL() -> URL {
-        // Use the provided absolute path to `profiles.json`
-        return URL(fileURLWithPath: profilesFileAbsolutePath)
     }
 }
 
 struct SettingsPageView_Previews: PreviewProvider {
     static var previews: some View {
-        SettingsPageView()
+        SettingsPageView(loggedInEmail: "test@example.com")
     }
 }
 
