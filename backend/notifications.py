@@ -75,9 +75,12 @@ while True:
         try:
             log.debug(f"Processing profile {profile_email}: {profile}")
 
+            # Ensure timezone is converted to an integer
+            timezone_offset = int(profile["timezone"])  # Use int() in Python
+
             # Get the current time and today's date
-            current_time = calendar.get_curr_time(profile["timezone"]).strftime("%H:%M")
-            today_short = calendar.get_today(profile["timezone"])
+            current_time = calendar.get_curr_time(timezone_offset).strftime("%H:%M")
+            today_short = calendar.get_today(timezone_offset)
             log.debug(f"Current time: {current_time}, Notification time: {profile['time']}")
             log.debug(f"Today's date: {today_short}, Last sent: {sent_days.get(profile_email)}")
 
@@ -85,7 +88,7 @@ while True:
             if profile["time"] == current_time and today_short != sent_days[profile_email]:
                 log.info(f"Sending {profile['method']} notification to user {profile_email}...")
 
-                today_long = calendar.get_today(profile["timezone"], True)
+                today_long = calendar.get_today(timezone_offset, True)
                 entry_dict = calendar.get_entry(today_short)
                 log.debug(f"Entry for today: {entry_dict}")
 
@@ -116,3 +119,4 @@ Lead4Tomorrow
     
     # Pause the loop for one minute
     time.sleep(60)
+

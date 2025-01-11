@@ -1,10 +1,1 @@
-{
-  "vhittuvalli@gmail.com" : {
-    "phone" : "4696685075",
-    "password" : "Varun0915",
-    "carrier" : "att",
-    "timezone" : -6,
-    "method" : "email",
-    "time" : "18:03"
-  }
-}
+{"vhittuvalli@yahoo.com":{"password":"Varun0915"},"vhittuvalli@gmail.com":{"phone":"4696685075","carrier":"att","method":"email","time":"19:20","timezone":"-7","password":"Varun0915"}}

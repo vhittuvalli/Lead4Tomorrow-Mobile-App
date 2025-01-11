@@ -46,7 +46,7 @@ struct SettingsPageView: View {
                                 Text("Method: \(preferredMethod)")
                                 Text("Email: \(email)")
                                 Text("Phone: \(phoneNumber) (\(carrier.capitalized))")
-                                Text("Timezone: UTC \(utcOffset(for: selectedTimezone))")
+                                Text("Timezone: \(selectedTimezone)")
                             }
                         } else {
                             Picker("Preferred Method", selection: $preferredMethod) {
@@ -92,7 +92,7 @@ struct SettingsPageView: View {
         guard var profile = profiles[loggedInEmail] else { return }
 
         profile["time"] = formattedTime(notificationTime)
-        profile["timezone"] = utcOffset(for: selectedTimezone)
+        profile["timezone"] = String(utcOffset(for: selectedTimezone)) // Save timezone as a string
         profile["phone"] = phoneNumber
         profile["carrier"] = carrier
         profile["method"] = preferredMethod.lowercased()
@@ -119,7 +119,15 @@ struct SettingsPageView: View {
         phoneNumber = profile["phone"] as? String ?? ""
         carrier = profile["carrier"] as? String ?? "att"
         preferredMethod = profile["method"] as? String ?? "Email"
-        selectedTimezone = americanTimezones.first(where: { utcOffset(for: $0.0) == (profile["timezone"] as? Int ?? 0) })?.0 ?? "America/New_York"
+
+        // Parse timezone string
+        if let timezoneOffsetString = profile["timezone"] as? String,
+           let timezoneOffset = Int(timezoneOffsetString) {
+            selectedTimezone = americanTimezones.first(where: { utcOffset(for: $0.0) == timezoneOffset })?.0 ?? "America/New_York"
+        } else {
+            selectedTimezone = "America/New_York"
+        }
+
         notificationTime = parseTimeString(profile["time"] as? String ?? "09:00")
         isNotificationsEnabled = true
     }

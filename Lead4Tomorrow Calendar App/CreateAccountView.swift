@@ -8,7 +8,6 @@ struct CreateAccountView: View {
     @State private var errorMessage: String?
     @State private var profiles: [String: [String: String]] = [:]
 
-    // Hardcoded path to profiles.json
     private var profilesFilePath: String {
         return "/Users/varun/Desktop/Coding/Lead4Tomorrow-Mobile-App/backend/storage/profiles.json"
     }
@@ -57,6 +56,7 @@ struct CreateAccountView: View {
         }
         .padding()
         .onAppear(perform: loadProfiles)
+        .navigationBarHidden(true) // Hides the navigation bar for this view
     }
 
     private func createAccount() {
@@ -81,25 +81,21 @@ struct CreateAccountView: View {
     }
 
     private func loadProfiles() {
-        let url = URL(fileURLWithPath: profilesFilePath)
-        if let data = try? Data(contentsOf: url),
-           let loadedProfiles = try? JSONDecoder().decode([String: [String: String]].self, from: data) {
-            profiles = loadedProfiles
-        } else {
+        do {
+            let data = try Data(contentsOf: URL(fileURLWithPath: profilesFilePath))
+            profiles = try JSONDecoder().decode([String: [String: String]].self, from: data)
+        } catch {
             profiles = [:]
+            print("Error loading profiles: \(error)")
         }
     }
 
     private func saveProfiles() {
-        let url = URL(fileURLWithPath: profilesFilePath)
-        if let data = try? JSONEncoder().encode(profiles) {
-            do {
-                try data.write(to: url)
-            } catch {
-                print("Failed to save profiles: \(error)")
-            }
-        } else {
-            print("Failed to encode profiles.")
+        do {
+            let data = try JSONEncoder().encode(profiles)
+            try data.write(to: URL(fileURLWithPath: profilesFilePath))
+        } catch {
+            print("Failed to save profiles: \(error)")
         }
     }
 }

@@ -57,20 +57,44 @@ struct LoginView: View {
     }
 
     private func login() {
-        guard let profile = profiles[email],
-              let savedPassword = profile["password"],
-              savedPassword == password else {
-            errorMessage = "Invalid email or password."
-            return
+        print("Starting login process...")
+        print("Entered email: \(email)")
+        print("Entered password: \(password)")
+
+        for (profileName, profileData) in profiles {
+            print("Checking profile: \(profileName)")
+            if profileName == email {
+                print("Username matches: \(profileName)")
+                if let savedPassword = profileData["password"] {
+                    print("Saved password for \(profileName): \(savedPassword)")
+                    if savedPassword == password {
+                        print("Password matches for \(profileName). Logging in...")
+                        loggedInEmail = email
+                        isLoggedIn = true
+                        errorMessage = nil
+                        return
+                    } else {
+                        print("Password does not match for \(profileName).")
+                    }
+                } else {
+                    print("Password not found for \(profileName).")
+                }
+            } else {
+                print("Username does not match: \(profileName)")
+            }
         }
-        loggedInEmail = email
-        isLoggedIn = true
+
+        errorMessage = "Invalid username or password."
+        print("Login failed for email: \(email)")
     }
 
     private func loadProfiles() {
+        print("Loading profiles from: \(profilesFilePath)")
+        let url = URL(fileURLWithPath: profilesFilePath)
         do {
-            let data = try Data(contentsOf: URL(fileURLWithPath: profilesFilePath))
+            let data = try Data(contentsOf: url)
             profiles = try JSONDecoder().decode([String: [String: String]].self, from: data)
+            print("Successfully loaded profiles: \(profiles)")
         } catch {
             profiles = [:]
             print("Error loading profiles: \(error)")
