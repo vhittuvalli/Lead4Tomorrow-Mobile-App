@@ -4,17 +4,13 @@ import UserNotifications
 struct SettingsPageView: View {
     let loggedInEmail: String
 
-    @State private var profiles: [String: [String: Any]] = [:]
-    @State private var email: String = ""
-    @State private var phoneNumber: String = ""
-    @State private var carrier: String = "att"
-    @State private var preferredMethod: String = "Email"
-    @State private var selectedTimezone: String = "America/New_York"
+    @State private var phoneNumber = ""
+    @State private var carrier = "att"
+    @State private var preferredMethod = "Email"
+    @State private var selectedTimezone = "America/New_York"
     @State private var notificationTime = Date()
     @State private var isNotificationsEnabled = false
     @State private var isProfileCollapsed = false
-
-    private let profilesFilePath = "/Users/varun/Desktop/Coding/Lead4Tomorrow-Mobile-App/backend/storage/profiles.json"
 
     private let carriers = ["att", "tmobile", "verizon", "sprint"]
     private let americanTimezones = [
@@ -44,7 +40,6 @@ struct SettingsPageView: View {
                             VStack(alignment: .leading, spacing: 8) {
                                 Text("Notification Time: \(formattedTime(notificationTime))")
                                 Text("Method: \(preferredMethod)")
-                                Text("Email: \(email)")
                                 Text("Phone: \(phoneNumber) (\(carrier.capitalized))")
                                 Text("Timezone: \(selectedTimezone)")
                             }
@@ -52,21 +47,16 @@ struct SettingsPageView: View {
                             Picker("Preferred Method", selection: $preferredMethod) {
                                 Text("Email").tag("Email")
                                 Text("Text").tag("Text")
-                            }
-                            .pickerStyle(SegmentedPickerStyle())
+                            }.pickerStyle(SegmentedPickerStyle())
 
-                            DatePicker(
-                                "Notification Time",
-                                selection: $notificationTime,
-                                displayedComponents: .hourAndMinute
-                            )
+                            DatePicker("Notification Time", selection: $notificationTime, displayedComponents: .hourAndMinute)
 
                             TextField("Enter Phone Number", text: $phoneNumber)
                                 .keyboardType(.phonePad)
 
                             Picker("Select Timezone", selection: $selectedTimezone) {
-                                ForEach(americanTimezones, id: \.0) { timeZone in
-                                    Text(timeZone.1).tag(timeZone.0)
+                                ForEach(americanTimezones, id: \.0) { tz in
+                                    Text(tz.1).tag(tz.0)
                                 }
                             }
                         }
@@ -82,24 +72,64 @@ struct SettingsPageView: View {
                 }
             }
             .navigationTitle("Settings")
-            .onAppear {
-                loadProfile()
-            }
+            .onAppear(perform: loadProfile)
         }
     }
 
     private func saveProfile() {
-        guard var profile = profiles[loggedInEmail] else { return }
+        guard let url = URL(string: "http://localhost:5000/update_profile") else { return }
 
-        profile["time"] = formattedTime(notificationTime)
-        profile["timezone"] = String(utcOffset(for: selectedTimezone)) // Save timezone as a string
-        profile["phone"] = phoneNumber
-        profile["carrier"] = carrier
-        profile["method"] = preferredMethod.lowercased()
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
-        profiles[loggedInEmail] = profile
-        saveProfiles(profiles)
-        isProfileCollapsed.toggle()
+        let body: [String: Any] = [
+            "email": loggedInEmail,
+            "time": formattedTime(notificationTime),
+            "timezone": "\(utcOffset(for: selectedTimezone))",
+            "phone": phoneNumber,
+            "carrier": carrier,
+            "method": preferredMethod.lowercased()
+        ]
+
+        request.httpBody = try? JSONSerialization.data(withJSONObject: body)
+
+        URLSession.shared.dataTask(with: request) { _, _, error in
+            if error == nil {
+                DispatchQueue.main.async {
+                    isProfileCollapsed = true
+                }
+            } else {
+                print("Save error: \(error!)")
+            }
+        }.resume()
+    }
+
+    private func loadProfile() {
+        guard let url = URL(string: "http://localhost:5000/get_profile?email=\(loggedInEmail)") else { return }
+
+        URLSession.shared.dataTask(with: url) { data, _, _ in
+            guard let data = data,
+                  let profile = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+                print("Failed to load profile")
+                return
+            }
+
+            DispatchQueue.main.async {
+                self.phoneNumber = profile["phone"] as? String ?? ""
+                self.carrier = profile["carrier"] as? String ?? "att"
+                self.preferredMethod = profile["method"] as? String ?? "Email"
+
+                if let tzStr = profile["timezone"] as? String, let offset = Int(tzStr) {
+                    self.selectedTimezone = americanTimezones.first(where: {
+                        utcOffset(for: $0.0) == offset
+                    })?.0 ?? "America/New_York"
+                }
+
+                self.notificationTime = parseTimeString(profile["time"] as? String ?? "09:00")
+                self.isNotificationsEnabled = true
+            }
+        }.resume()
     }
 
     private func resetFields() {
@@ -109,40 +139,6 @@ struct SettingsPageView: View {
         selectedTimezone = "America/New_York"
         notificationTime = Date()
         isProfileCollapsed = false
-    }
-
-    private func loadProfile() {
-        profiles = loadProfiles() ?? [:]
-        guard let profile = profiles[loggedInEmail] else { return }
-
-        email = loggedInEmail
-        phoneNumber = profile["phone"] as? String ?? ""
-        carrier = profile["carrier"] as? String ?? "att"
-        preferredMethod = profile["method"] as? String ?? "Email"
-
-        // Parse timezone string
-        if let timezoneOffsetString = profile["timezone"] as? String,
-           let timezoneOffset = Int(timezoneOffsetString) {
-            selectedTimezone = americanTimezones.first(where: { utcOffset(for: $0.0) == timezoneOffset })?.0 ?? "America/New_York"
-        } else {
-            selectedTimezone = "America/New_York"
-        }
-
-        notificationTime = parseTimeString(profile["time"] as? String ?? "09:00")
-        isNotificationsEnabled = true
-    }
-
-    private func saveProfiles(_ profiles: [String: [String: Any]]) {
-        let profilesURL = URL(fileURLWithPath: profilesFilePath)
-        guard let data = try? JSONSerialization.data(withJSONObject: profiles, options: .prettyPrinted) else { return }
-        try? data.write(to: profilesURL)
-    }
-
-    private func loadProfiles() -> [String: [String: Any]]? {
-        let profilesURL = URL(fileURLWithPath: profilesFilePath)
-        guard let data = try? Data(contentsOf: profilesURL),
-              let profiles = try? JSONSerialization.jsonObject(with: data) as? [String: [String: Any]] else { return nil }
-        return profiles
     }
 
     private func formattedTime(_ date: Date) -> String {
@@ -158,14 +154,7 @@ struct SettingsPageView: View {
     }
 
     private func utcOffset(for timeZoneIdentifier: String) -> Int {
-        guard let timeZone = TimeZone(identifier: timeZoneIdentifier) else { return 0 }
-        return timeZone.secondsFromGMT() / 3600
-    }
-}
-
-struct SettingsPageView_Previews: PreviewProvider {
-    static var previews: some View {
-        SettingsPageView(loggedInEmail: "test@example.com")
+        return (TimeZone(identifier: timeZoneIdentifier)?.secondsFromGMT() ?? 0) / 3600
     }
 }
 

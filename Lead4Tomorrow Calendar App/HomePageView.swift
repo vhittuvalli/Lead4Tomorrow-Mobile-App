@@ -1,11 +1,17 @@
 import SwiftUI
 
+struct APIConfig {
+    static let baseURL = "http://127.0.0.1:5000" // CHANGE THIS for deployment
+}
+
 struct HomePageView: View {
     @Binding var loggedInEmail: String
 
     @State private var selectedDate = Date()
     @State private var entries: [String] = []
     @State private var theme: String = ""
+    @State private var isLoading = false
+    @State private var errorMessage: String?
 
     var body: some View {
         NavigationView {
@@ -18,21 +24,30 @@ struct HomePageView: View {
                 )
                 .datePickerStyle(GraphicalDatePickerStyle())
                 .padding()
-                .onChange(of: selectedDate, perform: { newDate in
-                    // Fetch entries whenever a new date is selected
+                .onChange(of: selectedDate) { newDate in
                     fetchEntries(for: formattedRequestDate(newDate))
-                })
+                }
 
                 // Display the theme of the month
                 Text("Theme of the Month: \(theme)")
                     .font(.headline)
                     .padding()
 
-                // Display the selected date and entries
+                // Display the selected date
                 Text("Selected Date: \(formattedDate(selectedDate))")
                     .padding()
 
-                if entries.isEmpty {
+                if isLoading {
+                    ProgressView("Loading...").padding()
+                }
+
+                if let error = errorMessage {
+                    Text(error)
+                        .foregroundColor(.red)
+                        .padding()
+                }
+
+                if entries.isEmpty && !isLoading {
                     Text("No entries for the selected date.")
                         .italic()
                         .padding()
@@ -43,51 +58,57 @@ struct HomePageView: View {
                 }
             }
             .navigationTitle("Home")
+            .onAppear {
+                fetchEntries(for: formattedRequestDate(selectedDate))
+            }
         }
     }
 
-    // Format the date for display in the app
     private func formattedDate(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.dateStyle = .long
         return formatter.string(from: date)
     }
 
-    // Format the date to send as a request (e.g., "M-d")
     private func formattedRequestDate(_ date: Date) -> String {
         let formatter = DateFormatter()
-        formatter.dateFormat = "M-d"  // Matches your backend's expected format
+        formatter.dateFormat = "M-d"
         return formatter.string(from: date)
     }
 
-    // Fetch entries for the selected date and update the theme
     private func fetchEntries(for date: String) {
-        guard let url = URL(string: "http://localhost:5000/get_entry?date=\(date)") else { return }
+        guard let url = URL(string: "\(APIConfig.baseURL)/get_entry?date=\(date)") else {
+            self.errorMessage = "Invalid URL."
+            return
+        }
+
+        isLoading = true
+        errorMessage = nil
 
         URLSession.shared.dataTask(with: url) { data, response, error in
-            if let data = data {
-                if let decodedResponse = try? JSONDecoder().decode([String: String].self, from: data) {
-                    DispatchQueue.main.async {
-                        // Update theme and entries based on the response
-                        self.theme = decodedResponse["theme"] ?? "No theme available"
-                        if let entry = decodedResponse["entry"] {
-                            self.entries = [entry]
-                        } else {
-                            self.entries = []
-                        }
-                    }
-                } else {
-                    // Handle decoding failure
-                    DispatchQueue.main.async {
-                        self.entries = ["Failed to load entries."]
-                        self.theme = "Failed to load theme."
-                    }
+            DispatchQueue.main.async {
+                self.isLoading = false
+
+                if let error = error {
+                    self.entries = []
+                    self.theme = ""
+                    self.errorMessage = "Error: \(error.localizedDescription)"
+                    return
                 }
-            } else if let error = error {
-                // Handle network error
-                DispatchQueue.main.async {
-                    self.entries = ["Error: \(error.localizedDescription)"]
-                    self.theme = "Error fetching theme."
+
+                guard let data = data,
+                      let decoded = try? JSONDecoder().decode([String: String].self, from: data) else {
+                    self.entries = []
+                    self.theme = ""
+                    self.errorMessage = "Failed to load data from server."
+                    return
+                }
+
+                self.theme = decoded["theme"] ?? "No theme available"
+                if let entry = decoded["entry"] {
+                    self.entries = [entry]
+                } else {
+                    self.entries = []
                 }
             }
         }.resume()

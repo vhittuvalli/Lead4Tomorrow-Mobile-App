@@ -6,11 +6,6 @@ struct LoginView: View {
     @State private var email: String = ""
     @State private var password: String = ""
     @State private var errorMessage: String?
-    @State private var profiles: [String: [String: String]] = [:]
-
-    private var profilesFilePath: String {
-        return "/Users/varun/Desktop/Coding/Lead4Tomorrow-Mobile-App/backend/storage/profiles.json"
-    }
 
     var body: some View {
         NavigationView {
@@ -52,53 +47,50 @@ struct LoginView: View {
                 }
             }
             .padding()
-            .onAppear(perform: loadProfiles)
         }
     }
 
     private func login() {
-        print("Starting login process...")
-        print("Entered email: \(email)")
-        print("Entered password: \(password)")
+        guard !email.isEmpty, !password.isEmpty else {
+            errorMessage = "Email and password are required."
+            return
+        }
 
-        for (profileName, profileData) in profiles {
-            print("Checking profile: \(profileName)")
-            if profileName == email {
-                print("Username matches: \(profileName)")
-                if let savedPassword = profileData["password"] {
-                    print("Saved password for \(profileName): \(savedPassword)")
-                    if savedPassword == password {
-                        print("Password matches for \(profileName). Logging in...")
-                        loggedInEmail = email
-                        isLoggedIn = true
-                        errorMessage = nil
-                        return
-                    } else {
-                        print("Password does not match for \(profileName).")
-                    }
-                } else {
-                    print("Password not found for \(profileName).")
+        guard let encodedEmail = email.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+              let url = URL(string: "http://localhost:5000/get_profile?email=\(encodedEmail)") else {
+            errorMessage = "Invalid request."
+            return
+        }
+
+        URLSession.shared.dataTask(with: url) { data, response, error in
+            if let error = error {
+                DispatchQueue.main.async {
+                    errorMessage = "Network error: \(error.localizedDescription)"
+                }
+                return
+            }
+
+            guard let data = data,
+                  let profile = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let savedPassword = profile["password"] as? String else {
+                DispatchQueue.main.async {
+                    errorMessage = "Invalid email or password."
+                }
+                return
+            }
+
+            if savedPassword == password {
+                DispatchQueue.main.async {
+                    loggedInEmail = email
+                    isLoggedIn = true
+                    errorMessage = nil
                 }
             } else {
-                print("Username does not match: \(profileName)")
+                DispatchQueue.main.async {
+                    errorMessage = "Incorrect password."
+                }
             }
-        }
-
-        errorMessage = "Invalid username or password."
-        print("Login failed for email: \(email)")
-    }
-
-    private func loadProfiles() {
-        print("Loading profiles from: \(profilesFilePath)")
-        let url = URL(fileURLWithPath: profilesFilePath)
-        do {
-            let data = try Data(contentsOf: url)
-            profiles = try JSONDecoder().decode([String: [String: String]].self, from: data)
-            print("Successfully loaded profiles: \(profiles)")
-        } catch {
-            profiles = [:]
-            print("Error loading profiles: \(error)")
-        }
+        }.resume()
     }
 }
 
