@@ -1,31 +1,44 @@
-from flask import Flask, jsonify, request
-from L4T_calendar import L4T_Calendar  # Adjust the import path if necessary
+from flask import Flask, request, jsonify
+import json
+import os
+from flask_cors import CORS
 
 app = Flask(__name__)
-calendar = L4T_Calendar()
+CORS(app)
 
+# Use absolute path to avoid issues
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+PROFILES_PATH = os.path.join(BASE_DIR, "storage", "profiles.json")
 
-@app.route("/get_entry", methods=["GET"])
-def get_entry():
-    # Get the 'date' parameter from the request (format: 'M-d')
-    date_param = request.args.get("date")
+@app.route("/create_profile", methods=["POST"])
+def create_profile():
+    data = request.json
+    email = data.get("email")
+    password = data.get("password")
 
-    if date_param:
-        month, day = date_param.split("-")
-        date_dict = {"month": month, "day": day}
-    else:
-        date_dict = {"month": None, "day": None}
+    try:
+        if not email or not password:
+            return jsonify({"error": "Email and password are required"}), 400
 
-    # Fetch the entry and theme from the Calendar class
-    entry_data = calendar.get_entry(date_dict)
+        if os.path.exists(PROFILES_PATH):
+            with open(PROFILES_PATH, "r") as f:
+                profiles = json.load(f)
+        else:
+            profiles = {}
 
-    # Ensure the response includes both theme and entry
-    if isinstance(entry_data, dict):
-        return jsonify(entry_data)
-    else:
-        # Return an error message if the response is not as expected
-        return jsonify({"error": "Failed to retrieve entry or theme"}), 400
+        if email in profiles:
+            return jsonify({"error": "Account already exists"}), 400
 
+        profiles[email] = {"password": password}
+
+        with open(PROFILES_PATH, "w") as f:
+            json.dump(profiles, f, indent=2)
+
+        return jsonify({"message": "Account created"}), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
     app.run(port=5000, debug=True)
+

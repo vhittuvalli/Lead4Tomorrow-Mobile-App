@@ -1,1 +1,21 @@
-{"vhittuvalli@yahoo.com":{"password":"Varun0915"},"vhittuvalli@gmail.com":{"phone":"4696685075","carrier":"att","method":"email","time":"19:20","timezone":"-7","password":"Varun0915"}}
+{
+  "vhittuvalli@gmail.com" : {
+    "method" : "text",
+    "timezone" : "-5",
+    "password" : "Varun0915",
+    "carrier" : "att",
+    "phone" : "4696685075",
+    "time" : "11:24"
+  },
+  "vhittuvalli@yahoo.com" : {
+    "password" : "Varun0915"
+  },
+  "vhittuva@gmail.com" : {
+    "password" : "Varun0915",
+    "time" : "09:00",
+    "phone" : "4696685075",
+    "carrier" : "att",
+    "method" : "email",
+    "timezone" : "-4"
+  }
+}

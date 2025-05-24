@@ -6,57 +6,54 @@ struct CreateAccountView: View {
     @State private var password: String = ""
     @State private var confirmPassword: String = ""
     @State private var errorMessage: String?
-    @State private var profiles: [String: [String: String]] = [:]
-
-    private var profilesFilePath: String {
-        return "/Users/varun/Desktop/Coding/Lead4Tomorrow-Mobile-App/backend/storage/profiles.json"
-    }
 
     var body: some View {
-        VStack(spacing: 20) {
-            Text("Create Account")
-                .font(.largeTitle)
-                .fontWeight(.bold)
-
-            TextField("Enter Email", text: $email)
-                .keyboardType(.emailAddress)
-                .autocapitalization(.none)
-                .disableAutocorrection(true)
-                .padding()
-                .background(RoundedRectangle(cornerRadius: 8).stroke(Color.gray, lineWidth: 1))
-
-            TextField("Enter Password", text: $password)
-                .padding()
-                .background(RoundedRectangle(cornerRadius: 8).stroke(Color.gray, lineWidth: 1))
-
-            TextField("Confirm Password", text: $confirmPassword)
-                .padding()
-                .background(RoundedRectangle(cornerRadius: 8).stroke(Color.gray, lineWidth: 1))
-
-            if let errorMessage = errorMessage {
-                Text(errorMessage)
-                    .foregroundColor(.red)
-                    .multilineTextAlignment(.center)
-                    .padding(.top, 10)
-            }
-
-            Button(action: createAccount) {
+        ScrollView {
+            VStack(spacing: 20) {
                 Text("Create Account")
-                    .foregroundColor(.white)
-                    .padding()
-                    .frame(maxWidth: .infinity)
-                    .background(Color.green)
-                    .cornerRadius(8)
-            }
+                    .font(.largeTitle)
+                    .fontWeight(.bold)
 
-            Button(action: { presentationMode.wrappedValue.dismiss() }) {
-                Text("Back to Login")
-                    .foregroundColor(.blue)
+                TextField("Enter Email", text: $email)
+                    .keyboardType(.emailAddress)
+                    .autocapitalization(.none)
+                    .disableAutocorrection(true)
+                    .padding()
+                    .background(RoundedRectangle(cornerRadius: 8).stroke(Color.gray, lineWidth: 1))
+
+                SecureField("Enter Password", text: $password)
+                    .padding()
+                    .background(RoundedRectangle(cornerRadius: 8).stroke(Color.gray, lineWidth: 1))
+
+                SecureField("Confirm Password", text: $confirmPassword)
+                    .padding()
+                    .background(RoundedRectangle(cornerRadius: 8).stroke(Color.gray, lineWidth: 1))
+
+                if let errorMessage = errorMessage {
+                    Text(errorMessage)
+                        .foregroundColor(.red)
+                        .multilineTextAlignment(.center)
+                        .padding(.top, 10)
+                }
+
+                Button(action: createAccount) {
+                    Text("Create Account")
+                        .foregroundColor(.white)
+                        .padding()
+                        .frame(maxWidth: .infinity)
+                        .background(Color.green)
+                        .cornerRadius(8)
+                }
+
+                Button(action: { presentationMode.wrappedValue.dismiss() }) {
+                    Text("Back to Login")
+                        .foregroundColor(.blue)
+                }
             }
+            .padding()
         }
-        .padding()
-        .onAppear(perform: loadProfiles)
-        .navigationBarHidden(true) // Hides the navigation bar for this view
+        .ignoresSafeArea(.keyboard)
+        .navigationBarHidden(true)
     }
 
     private func createAccount() {
@@ -70,33 +67,53 @@ struct CreateAccountView: View {
             return
         }
 
-        if profiles[email] != nil {
-            errorMessage = "An account with this email already exists."
+        let profileData: [String: String] = [
+            "email": email,
+            "password": password
+        ]
+
+        guard let url = URL(string: "http://localhost:5000/create_profile") else {
+            errorMessage = "Invalid backend URL"
             return
         }
 
-        profiles[email] = ["password": password]
-        saveProfiles()
-        presentationMode.wrappedValue.dismiss()
-    }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try? JSONEncoder().encode(profileData)
 
-    private func loadProfiles() {
-        do {
-            let data = try Data(contentsOf: URL(fileURLWithPath: profilesFilePath))
-            profiles = try JSONDecoder().decode([String: [String: String]].self, from: data)
-        } catch {
-            profiles = [:]
-            print("Error loading profiles: \(error)")
-        }
-    }
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                DispatchQueue.main.async {
+                    errorMessage = "Network error: \(error.localizedDescription)"
+                }
+                return
+            }
 
-    private func saveProfiles() {
-        do {
-            let data = try JSONEncoder().encode(profiles)
-            try data.write(to: URL(fileURLWithPath: profilesFilePath))
-        } catch {
-            print("Failed to save profiles: \(error)")
-        }
+            guard let httpResponse = response as? HTTPURLResponse else {
+                DispatchQueue.main.async {
+                    errorMessage = "Invalid response from server"
+                }
+                return
+            }
+
+            if httpResponse.statusCode == 200 {
+                DispatchQueue.main.async {
+                    presentationMode.wrappedValue.dismiss()
+                }
+            } else {
+                if let data = data,
+                   let backendMessage = try? JSONDecoder().decode([String: String].self, from: data) {
+                    DispatchQueue.main.async {
+                        errorMessage = backendMessage["error"] ?? "Failed to create account."
+                    }
+                } else {
+                    DispatchQueue.main.async {
+                        errorMessage = "Unknown error occurred."
+                    }
+                }
+            }
+        }.resume()
     }
 }
 
