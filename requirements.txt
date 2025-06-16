@@ -1,5 +1,4 @@
 absl-py==2.1.0
-aiofiles @ file:///private/var/folders/sy/f16zz6x50xz3113nwtb9bvq00000gp/T/abs_0ar7qj9rcj/croot/aiofiles_1683773588297/work
 aiosqlite @ file:///private/var/folders/sy/f16zz6x50xz3113nwtb9bvq00000gp/T/abs_13w97vul7u/croot/aiosqlite_1683773912122/work
 altgraph==0.17.4
 annotated-types==0.7.0
