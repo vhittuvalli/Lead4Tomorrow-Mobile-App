@@ -7,6 +7,7 @@ import datetime
 app = Flask(__name__)
 CORS(app)
 
+
 # Absolute path to storage directory
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STORAGE_PATH = os.path.join(BASE_DIR, "storage")
@@ -17,7 +18,10 @@ ENTRIES_PATH = os.path.join(STORAGE_PATH, "entries.json")
 with open(ENTRIES_PATH, "r") as f:
     calendar_entries = json.load(f)
 
-
+@app.route("/", methods=["GET"])
+def home():
+    return jsonify({"message": "API is running"}), 200
+    
 @app.route("/get_entry", methods=["GET"])
 def get_entry():
     date_param = request.args.get("date")  # format: M-D
@@ -122,7 +126,7 @@ def update_profile():
         return jsonify({"error": str(e)}), 500
 
 
-if __name__ == "__main__":
+"""if __name__ == "__main__":
     # Ensures compatibility with iOS Simulator (localhost resolves to host machine)
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(host="0.0.0.0", port=5000, debug=True)"""
 
