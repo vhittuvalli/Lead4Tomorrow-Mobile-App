@@ -113,16 +113,18 @@ def update_profile():
         return jsonify({"error": "Email is required"}), 400
 
     try:
-        with open(PROFILES_PATH, "r") as f:
+        with open(DATA_FILE, "r") as f:
             profiles = json.load(f)
 
         if email not in profiles:
             return jsonify({"error": "Profile not found"}), 404
 
-        # Keep existing password
+        # Keep the existing hashed password
         password = profiles[email].get("password", "")
 
+        # Update fields
         profiles[email] = {
+            "email": email,  # keep email in the profile
             "password": password,
             "phone": data.get("phone", ""),
             "carrier": data.get("carrier", ""),
@@ -131,10 +133,11 @@ def update_profile():
             "time": data.get("time", "09:00")
         }
 
-        with open(PROFILES_PATH, "w") as f:
+        with open(DATA_FILE, "w") as f:
             json.dump(profiles, f, indent=2)
 
         return jsonify({"message": "Profile updated successfully"}), 200
+
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 

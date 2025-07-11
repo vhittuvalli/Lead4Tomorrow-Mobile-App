@@ -77,7 +77,7 @@ struct SettingsPageView: View {
     }
 
     private func saveProfile() {
-        guard let url = URL(string: "http://localhost:5000/update_profile") else { return }
+        guard let url = URL(string: "https://lead4tomorrow-mobile-app.onrender.com/update_profile") else { return }
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -106,7 +106,8 @@ struct SettingsPageView: View {
     }
 
     private func loadProfile() {
-        guard let url = URL(string: "http://localhost:5000/get_profile?email=\(loggedInEmail)") else { return }
+        guard let encodedEmail = loggedInEmail.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+              let url = URL(string: "https://lead4tomorrow-mobile-app.onrender.com/get_profile?email=\(encodedEmail)") else { return }
 
         URLSession.shared.dataTask(with: url) { data, _, _ in
             guard let data = data,
