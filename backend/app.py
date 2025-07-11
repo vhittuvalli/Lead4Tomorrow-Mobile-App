@@ -11,7 +11,7 @@ CORS(app)
 # Absolute path to storage directory
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STORAGE_PATH = os.path.join(BASE_DIR, "storage")
-PROFILES_PATH = os.path.join(STORAGE_PATH, "profiles.json")
+DATA_FILE = os.path.join(STORAGE_PATH, "profiles.json")
 ENTRIES_PATH = os.path.join(STORAGE_PATH, "entries.json")
 
 # Load entries.json once into memory
