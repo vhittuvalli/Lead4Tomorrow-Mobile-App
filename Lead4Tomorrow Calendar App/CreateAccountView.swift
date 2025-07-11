@@ -22,7 +22,9 @@ struct CreateAccountView: View {
                 Group {
                     TextField("Enter Email", text: $email)
                     SecureField("Enter Password", text: $password)
+                        .textContentType(.oneTimeCode) // disables iOS autofill overlay
                     SecureField("Confirm Password", text: $confirmPassword)
+                        .textContentType(.oneTimeCode)
                     TextField("Phone Number", text: $phone)
                     TextField("Carrier", text: $carrier)
                     TextField("Method (text/email)", text: $method)
