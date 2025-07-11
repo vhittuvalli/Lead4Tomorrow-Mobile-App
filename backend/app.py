@@ -3,6 +3,7 @@ from flask_cors import CORS
 import json
 import os
 import datetime
+import bcrypt
 
 app = Flask(__name__)
 CORS(app)
