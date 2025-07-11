@@ -47,7 +47,7 @@ def get_entry():
 
 @app.route("/create_profile", methods=["POST"])
 def create_profile():
-    data = request.json
+    data = request.get_json()
     email = data.get("email")
     password = data.get("password")
 
@@ -55,8 +55,8 @@ def create_profile():
         return jsonify({"error": "Email and password are required"}), 400
 
     try:
-        if os.path.exists(PROFILES_PATH):
-            with open(PROFILES_PATH, "r") as f:
+        if os.path.exists(DATA_FILE):
+            with open(DATA_FILE, "r") as f:
                 profiles = json.load(f)
         else:
             profiles = {}
@@ -64,17 +64,22 @@ def create_profile():
         if email in profiles:
             return jsonify({"error": "Account already exists"}), 400
 
-        # 🔐 Hash the password before storing
+        # Hash the password
         hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-        profiles[email] = {"email": email, "password": hashed_password}
 
-        with open(PROFILES_PATH, "w") as f:
+        profiles[email] = {
+            "email": email,
+            "password": hashed_password
+        }
+
+        with open(DATA_FILE, "w") as f:
             json.dump(profiles, f, indent=2)
 
         return jsonify({"message": "Account created"}), 200
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 
 @app.route('/login', methods=['POST'])

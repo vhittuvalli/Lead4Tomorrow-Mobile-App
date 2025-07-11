@@ -5,67 +5,58 @@ struct CreateAccountView: View {
     @State private var email: String = ""
     @State private var password: String = ""
     @State private var confirmPassword: String = ""
-    @State private var phone: String = ""
-    @State private var carrier: String = ""
-    @State private var method: String = ""
-    @State private var time: String = ""
-    @State private var timezone: String = ""
     @State private var errorMessage: String?
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 20) {
-                Text("Create Account")
-                    .font(.largeTitle)
-                    .fontWeight(.bold)
+        VStack(spacing: 20) {
+            Text("Create Account")
+                .font(.largeTitle)
+                .fontWeight(.bold)
 
-                Group {
-                    TextField("Enter Email", text: $email)
-                    SecureField("Enter Password", text: $password)
-                        .textContentType(.oneTimeCode) // disables iOS autofill overlay
-                    SecureField("Confirm Password", text: $confirmPassword)
-                        .textContentType(.oneTimeCode)
-                    TextField("Phone Number", text: $phone)
-                    TextField("Carrier", text: $carrier)
-                    TextField("Method (text/email)", text: $method)
-                    TextField("Time (e.g., 13:00)", text: $time)
-                    TextField("Timezone (e.g., -5)", text: $timezone)
-                }
+            TextField("Enter Email", text: $email)
                 .padding()
                 .background(RoundedRectangle(cornerRadius: 8).stroke(Color.gray, lineWidth: 1))
                 .autocapitalization(.none)
                 .disableAutocorrection(true)
 
-                if let errorMessage = errorMessage {
-                    Text(errorMessage)
-                        .foregroundColor(.red)
-                        .multilineTextAlignment(.center)
-                        .padding(.top, 10)
-                }
+            SecureField("Enter Password", text: $password)
+                .textContentType(.oneTimeCode)
+                .padding()
+                .background(RoundedRectangle(cornerRadius: 8).stroke(Color.gray, lineWidth: 1))
 
-                Button(action: createAccount) {
-                    Text("Create Account")
-                        .foregroundColor(.white)
-                        .padding()
-                        .frame(maxWidth: .infinity)
-                        .background(Color.green)
-                        .cornerRadius(8)
-                }
+            SecureField("Confirm Password", text: $confirmPassword)
+                .textContentType(.oneTimeCode)
+                .padding()
+                .background(RoundedRectangle(cornerRadius: 8).stroke(Color.gray, lineWidth: 1))
 
-                Button(action: { presentationMode.wrappedValue.dismiss() }) {
-                    Text("Back to Login")
-                        .foregroundColor(.blue)
-                }
+            if let errorMessage = errorMessage {
+                Text(errorMessage)
+                    .foregroundColor(.red)
+                    .multilineTextAlignment(.center)
+                    .padding(.top, 10)
             }
-            .padding()
+
+            Button(action: createAccount) {
+                Text("Create Account")
+                    .foregroundColor(.white)
+                    .padding()
+                    .frame(maxWidth: .infinity)
+                    .background(Color.green)
+                    .cornerRadius(8)
+            }
+
+            Button(action: { presentationMode.wrappedValue.dismiss() }) {
+                Text("Back to Login")
+                    .foregroundColor(.blue)
+            }
         }
-        .ignoresSafeArea(.keyboard)
+        .padding()
         .navigationBarHidden(true)
     }
 
     private func createAccount() {
         guard !email.isEmpty, !password.isEmpty, !confirmPassword.isEmpty else {
-            errorMessage = "All fields are required."
+            errorMessage = "Email and password are required."
             return
         }
 
@@ -76,12 +67,7 @@ struct CreateAccountView: View {
 
         let profileData: [String: String] = [
             "email": email,
-            "password": password,
-            "phone": phone,
-            "carrier": carrier,
-            "method": method,
-            "time": time,
-            "timezone": timezone
+            "password": password
         ]
 
         guard let url = URL(string: "https://lead4tomorrow-mobile-app.onrender.com/create_profile") else {
