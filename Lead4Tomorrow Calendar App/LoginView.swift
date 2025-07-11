@@ -56,13 +56,22 @@ struct LoginView: View {
             return
         }
 
-        guard let encodedEmail = email.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
-              let url = URL(string: "http://localhost:5000/get_profile?email=\(encodedEmail)") else {
-            errorMessage = "Invalid request."
+        guard let url = URL(string: "https://lead4tomorrow-mobile-app.onrender.com/login") else {
+            errorMessage = "Invalid backend URL."
             return
         }
 
-        URLSession.shared.dataTask(with: url) { data, response, error in
+        let loginData: [String: String] = [
+            "email": email,
+            "password": password
+        ]
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try? JSONEncoder().encode(loginData)
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
                 DispatchQueue.main.async {
                     errorMessage = "Network error: \(error.localizedDescription)"
@@ -70,27 +79,22 @@ struct LoginView: View {
                 return
             }
 
-            guard let data = data,
+            guard let httpResponse = response as? HTTPURLResponse,
+                  httpResponse.statusCode == 200,
+                  let data = data,
                   let profile = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                  let savedPassword = profile["password"] as? String else {
+                  let _ = profile["email"] as? String else {
                 DispatchQueue.main.async {
                     errorMessage = "Invalid email or password."
                 }
                 return
             }
 
-            if savedPassword == password {
-                DispatchQueue.main.async {
-                    loggedInEmail = email
-                    isLoggedIn = true
-                    errorMessage = nil
-                }
-            } else {
-                DispatchQueue.main.async {
-                    errorMessage = "Incorrect password."
-                }
+            DispatchQueue.main.async {
+                loggedInEmail = email
+                isLoggedIn = true
+                errorMessage = nil
             }
         }.resume()
     }
 }
-

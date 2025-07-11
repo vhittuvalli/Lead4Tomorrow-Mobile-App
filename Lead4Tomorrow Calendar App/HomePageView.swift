@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct APIConfig {
-    static let baseURL = "http://127.0.0.1:5000" // CHANGE THIS for deployment
+    static let baseURL = "https://lead4tomorrow-mobile-app.onrender.com" // CHANGE THIS for deployment
 }
 
 struct HomePageView: View {

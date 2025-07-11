@@ -63,32 +63,39 @@ def create_profile():
         if email in profiles:
             return jsonify({"error": "Account already exists"}), 400
 
-        profiles[email] = {"password": password}
+        # 🔐 Hash the password before storing
+        hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        profiles[email] = {"email": email, "password": hashed_password}
 
         with open(PROFILES_PATH, "w") as f:
             json.dump(profiles, f, indent=2)
 
         return jsonify({"message": "Account created"}), 200
+
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 
-@app.route("/get_profile", methods=["GET"])
-def get_profile():
-    email = request.args.get("email")
-    if not email:
-        return jsonify({"error": "Email is required"}), 400
+@app.route('/login', methods=['POST'])
+def login():
+    data = request.get_json()
+    email = data.get('email')
+    input_password = data.get('password')
 
-    try:
-        with open(PROFILES_PATH, "r") as f:
-            profiles = json.load(f)
+    with open(DATA_FILE, 'r') as f:
+        profiles = json.load(f)
 
-        if email in profiles:
-            return jsonify(profiles[email]), 200
-        else:
-            return jsonify({"error": "Profile not found"}), 404
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    user = profiles.get(email)
+    if not user or 'password' not in user:
+        return jsonify({"error": "Invalid email or password"}), 401
+
+    stored_hash = user['password'].encode('utf-8')
+
+    if bcrypt.checkpw(input_password.encode('utf-8'), stored_hash):
+        user_copy = {k: v for k, v in user.items() if k != 'password'}
+        return jsonify(user_copy), 200
+    else:
+        return jsonify({"error": "Incorrect password"}), 401
 
 
 @app.route("/update_profile", methods=["POST"])

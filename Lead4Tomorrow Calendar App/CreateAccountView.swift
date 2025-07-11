@@ -5,6 +5,11 @@ struct CreateAccountView: View {
     @State private var email: String = ""
     @State private var password: String = ""
     @State private var confirmPassword: String = ""
+    @State private var phone: String = ""
+    @State private var carrier: String = ""
+    @State private var method: String = ""
+    @State private var time: String = ""
+    @State private var timezone: String = ""
     @State private var errorMessage: String?
 
     var body: some View {
@@ -14,20 +19,20 @@ struct CreateAccountView: View {
                     .font(.largeTitle)
                     .fontWeight(.bold)
 
-                TextField("Enter Email", text: $email)
-                    .keyboardType(.emailAddress)
-                    .autocapitalization(.none)
-                    .disableAutocorrection(true)
-                    .padding()
-                    .background(RoundedRectangle(cornerRadius: 8).stroke(Color.gray, lineWidth: 1))
-
-                SecureField("Enter Password", text: $password)
-                    .padding()
-                    .background(RoundedRectangle(cornerRadius: 8).stroke(Color.gray, lineWidth: 1))
-
-                SecureField("Confirm Password", text: $confirmPassword)
-                    .padding()
-                    .background(RoundedRectangle(cornerRadius: 8).stroke(Color.gray, lineWidth: 1))
+                Group {
+                    TextField("Enter Email", text: $email)
+                    SecureField("Enter Password", text: $password)
+                    SecureField("Confirm Password", text: $confirmPassword)
+                    TextField("Phone Number", text: $phone)
+                    TextField("Carrier", text: $carrier)
+                    TextField("Method (text/email)", text: $method)
+                    TextField("Time (e.g., 13:00)", text: $time)
+                    TextField("Timezone (e.g., -5)", text: $timezone)
+                }
+                .padding()
+                .background(RoundedRectangle(cornerRadius: 8).stroke(Color.gray, lineWidth: 1))
+                .autocapitalization(.none)
+                .disableAutocorrection(true)
 
                 if let errorMessage = errorMessage {
                     Text(errorMessage)
@@ -69,10 +74,15 @@ struct CreateAccountView: View {
 
         let profileData: [String: String] = [
             "email": email,
-            "password": password
+            "password": password,
+            "phone": phone,
+            "carrier": carrier,
+            "method": method,
+            "time": time,
+            "timezone": timezone
         ]
 
-        guard let url = URL(string: "http://localhost:5000/create_profile") else {
+        guard let url = URL(string: "https://lead4tomorrow-mobile-app.onrender.com/create_profile") else {
             errorMessage = "Invalid backend URL"
             return
         }
