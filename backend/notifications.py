@@ -5,23 +5,23 @@ import time
 from L4T_calendar import L4T_Calendar
 import logging
 import utils
-
+import requests
 calendar = L4T_Calendar()
 
 log = logging.getLogger(__name__)
 utils.config_log()
 
 def get_profiles():
-    """Get user profiles from `storage/profiles.json`."""
-    while True:
-        try:
-            with open(utils.create_path("storage", "profiles.json"), "r") as f:
-                profiles = json.load(f)
-                log.debug(f"Loaded profiles: {profiles}")
-                return profiles
-        except Exception as e:
-            log.error(f"Failed to load profiles.json: {e}")
-            return {}
+    """Fetch user profiles from the live backend."""
+    try:
+        response = requests.get("https://lead4tomorrow-mobile-app.onrender.com/show_profiles", timeout=10)
+        response.raise_for_status()
+        profiles = response.json()
+        log.debug(f"Fetched profiles from server: {profiles}")
+        return profiles
+    except Exception as e:
+        log.error(f"Failed to fetch profiles from server: {e}")
+        return {}
 
 # TODO: Add Lead4Tomorrow's account info here
 username = "scoutingtmobile@gmail.com"

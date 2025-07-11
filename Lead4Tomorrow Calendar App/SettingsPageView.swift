@@ -51,8 +51,16 @@ struct SettingsPageView: View {
 
                             DatePicker("Notification Time", selection: $notificationTime, displayedComponents: .hourAndMinute)
 
-                            TextField("Enter Phone Number", text: $phoneNumber)
-                                .keyboardType(.phonePad)
+                            if preferredMethod == "Text" {
+                                TextField("Enter Phone Number", text: $phoneNumber)
+                                    .keyboardType(.phonePad)
+
+                                Picker("Carrier", selection: $carrier) {
+                                    ForEach(carriers, id: \.self) { carrier in
+                                        Text(carrier.capitalized).tag(carrier)
+                                    }
+                                }
+                            }
 
                             Picker("Select Timezone", selection: $selectedTimezone) {
                                 ForEach(americanTimezones, id: \.0) { tz in
@@ -61,12 +69,15 @@ struct SettingsPageView: View {
                             }
                         }
 
-                        Button(action: saveProfile) {
-                            Text(isProfileCollapsed ? "Edit Profile" : "Save Profile")
-                                .foregroundColor(.white)
-                                .padding()
-                                .background(isProfileCollapsed ? Color.orange : Color.blue)
-                                .cornerRadius(8)
+                        Section {
+                            Button(action: saveProfile) {
+                                Text(isProfileCollapsed ? "Edit Profile" : "Save Profile")
+                                    .foregroundColor(.white)
+                                    .padding()
+                                    .frame(maxWidth: .infinity)
+                                    .background(isProfileCollapsed ? Color.orange : Color.blue)
+                                    .cornerRadius(8)
+                            }
                         }
                     }
                 }
