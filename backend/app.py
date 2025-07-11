@@ -19,9 +19,20 @@ ENTRIES_PATH = os.path.join(STORAGE_PATH, "entries.json")
 with open(ENTRIES_PATH, "r") as f:
     calendar_entries = json.load(f)
 
+
 @app.route("/", methods=["GET"])
 def home():
     return jsonify({"message": "API is running"}), 200
+
+@app.route("/show_profiles", methods=["GET"])
+def show_profiles():
+    try:
+        with open(DATA_FILE, "r") as f:
+            profiles = json.load(f)
+        return jsonify(profiles), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
     
 @app.route("/get_entry", methods=["GET"])
 def get_entry():
