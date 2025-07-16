@@ -77,7 +77,7 @@ struct HomePageView: View {
     }
 
     private func fetchEntries(for date: String) {
-        guard let url = URL(string: "\(APIConfig.baseURL)/get_entry?date=\(date)") else {
+        guard let url = URL(string: "https://lead4tomorrow-mobile-app.onrender.com/get_entry?month=\(month)&day=\(day)") else {
             self.errorMessage = "Invalid URL."
             return
         }
