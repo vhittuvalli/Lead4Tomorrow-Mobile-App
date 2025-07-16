@@ -1,7 +1,7 @@
-import SwiftUI
+=import SwiftUI
 
 struct APIConfig {
-    static let baseURL = "https://lead4tomorrow-mobile-app.onrender.com" // CHANGE THIS for deployment
+    static let baseURL = "https://lead4tomorrow-mobile-app.onrender.com"
 }
 
 struct HomePageView: View {
@@ -77,7 +77,16 @@ struct HomePageView: View {
     }
 
     private func fetchEntries(for date: String) {
-        guard let url = URL(string: "https://lead4tomorrow-mobile-app.onrender.com/get_entry?month=\(month)&day=\(day)") else {
+        let components = date.split(separator: "-")
+        guard components.count == 2 else {
+            self.errorMessage = "Invalid date format."
+            return
+        }
+
+        let month = components[0]
+        let day = components[1]
+
+        guard let url = URL(string: "\(APIConfig.baseURL)/get_entry?month=\(month)&day=\(day)") else {
             self.errorMessage = "Invalid URL."
             return
         }
