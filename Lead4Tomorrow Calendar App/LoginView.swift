@@ -80,10 +80,7 @@ struct LoginView: View {
             }
 
             guard let httpResponse = response as? HTTPURLResponse,
-                  httpResponse.statusCode == 200,
-                  let data = data,
-                  let profile = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                  let _ = profile["email"] as? String else {
+                  httpResponse.statusCode == 200 else {
                 DispatchQueue.main.async {
                     errorMessage = "Invalid email or password."
                 }
@@ -98,3 +95,4 @@ struct LoginView: View {
         }.resume()
     }
 }
+
