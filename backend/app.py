@@ -1,9 +1,9 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import os
+import json
 import bcrypt
 import psycopg
-from calendar_data import calendar_data
 
 app = Flask(__name__)
 CORS(app)
@@ -12,7 +12,7 @@ CORS(app)
 DB_HOST = "dpg-d1s18nje5dus73fm1qeg-a"
 DB_NAME = "lead4tomorrow"
 DB_USER = "lead4tomorrow_user"
-DB_PASSWORD = os.getenv("DB_PASSWORD")  # Set in Render
+DB_PASSWORD = os.getenv("DB_PASSWORD")
 
 def get_connection():
     return psycopg.connect(
@@ -23,15 +23,31 @@ def get_connection():
         autocommit=True
     )
 
+# Load calendar entries from entries.json
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+ENTRIES_PATH = os.path.join(BASE_DIR, "storage", "entries.json")
+with open(ENTRIES_PATH, "r") as f:
+    calendar_entries = json.load(f)
+
+@app.route("/", methods=["GET"])
+def home():
+    return jsonify({"message": "API is running"}), 200
+
 @app.route("/get_entry", methods=["GET"])
 def get_entry():
     month = request.args.get("month")
     day = request.args.get("day")
+
     try:
-        entry = calendar_data.get(month, {}).get(day, None)
-        if entry:
-            return jsonify(entry)
-        return jsonify({"error": "Entry not found"}), 404
+        if not month:
+            return jsonify({"error": "Missing month"}), 400
+
+        if month in calendar_entries:
+            theme = calendar_entries[month].get("theme", "")
+            entry = calendar_entries[month].get(day, "") if day else ""
+            return jsonify({"theme": theme, "entry": entry}), 200
+        else:
+            return jsonify({"theme": "", "entry": ""}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
