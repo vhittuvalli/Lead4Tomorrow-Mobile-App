@@ -20,7 +20,7 @@ def get_connection():
         dbname=DB_NAME,
         user=DB_USER,
         password=DB_PASSWORD,
-        autocommit=True  # Ensures changes persist without manual commit
+        autocommit=True
     )
 
 @app.route("/get_entry", methods=["GET"])
@@ -43,12 +43,13 @@ def create_profile():
     hashed = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt())
 
     with get_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute("""
-                INSERT INTO profiles (email, password) 
-                VALUES (%s, %s) 
-                ON CONFLICT (email) DO NOTHING
-            """, (email, hashed.decode("utf-8")))
+        cur = conn.cursor()
+        cur.execute("""
+            INSERT INTO profiles (email, password) 
+            VALUES (%s, %s) 
+            ON CONFLICT (email) DO NOTHING
+        """, (email, hashed.decode("utf-8")))
+        cur.close()
 
     return jsonify({"message": "Account created"})
 
@@ -59,9 +60,10 @@ def login():
     password = data["password"]
 
     with get_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute("SELECT password FROM profiles WHERE email = %s", (email,))
-            result = cur.fetchone()
+        cur = conn.cursor()
+        cur.execute("SELECT password FROM profiles WHERE email = %s", (email,))
+        result = cur.fetchone()
+        cur.close()
 
     if result and bcrypt.checkpw(password.encode("utf-8"), result[0].encode("utf-8")):
         return jsonify({"message": "Login successful"})
@@ -71,34 +73,36 @@ def login():
 def update_profile():
     data = request.json
     with get_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute("""
-                INSERT INTO profiles (email, phone, carrier, method, timezone, time)
-                VALUES (%s, %s, %s, %s, %s, %s)
-                ON CONFLICT (email)
-                DO UPDATE SET
-                    phone = EXCLUDED.phone,
-                    carrier = EXCLUDED.carrier,
-                    method = EXCLUDED.method,
-                    timezone = EXCLUDED.timezone,
-                    time = EXCLUDED.time
-            """, (
-                data["email"], data["phone"], data["carrier"],
-                data["method"], data["timezone"], data["time"]
-            ))
+        cur = conn.cursor()
+        cur.execute("""
+            INSERT INTO profiles (email, phone, carrier, method, timezone, time)
+            VALUES (%s, %s, %s, %s, %s, %s)
+            ON CONFLICT (email)
+            DO UPDATE SET
+                phone = EXCLUDED.phone,
+                carrier = EXCLUDED.carrier,
+                method = EXCLUDED.method,
+                timezone = EXCLUDED.timezone,
+                time = EXCLUDED.time
+        """, (
+            data["email"], data["phone"], data["carrier"],
+            data["method"], data["timezone"], data["time"]
+        ))
+        cur.close()
     return jsonify({"status": "success"})
 
 @app.route("/get_profile", methods=["GET"])
 def get_profile():
     email = request.args.get("email")
     with get_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute("""
-                SELECT phone, carrier, method, timezone, time 
-                FROM profiles 
-                WHERE email = %s
-            """, (email,))
-            row = cur.fetchone()
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT phone, carrier, method, timezone, time 
+            FROM profiles 
+            WHERE email = %s
+        """, (email,))
+        row = cur.fetchone()
+        cur.close()
 
     if row:
         return jsonify({
@@ -113,12 +117,13 @@ def get_profile():
 @app.route("/show_profiles", methods=["GET"])
 def show_profiles():
     with get_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute("""
-                SELECT email, phone, carrier, method, timezone, time 
-                FROM profiles
-            """)
-            rows = cur.fetchall()
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT email, phone, carrier, method, timezone, time 
+            FROM profiles
+        """)
+        rows = cur.fetchall()
+        cur.close()
 
     profiles = {
         email: {
@@ -131,7 +136,7 @@ def show_profiles():
     }
     return jsonify(profiles)
 
-# Uncomment this if testing locally
+# Uncomment this for local testing
 # if __name__ == "__main__":
 #     app.run(debug=True)
 
