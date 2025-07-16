@@ -1,159 +1,147 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import json
+import psycopg2
 import os
-import datetime
 import bcrypt
+from calendar_data import calendar_data
 
 app = Flask(__name__)
 CORS(app)
 
+# PostgreSQL credentials from Render
+DB_HOST = "dpg-d1s18nje5dus73fm1qeg-a"
+DB_NAME = "lead4tomorrow"
+DB_USER = "lead4tomorrow_user"
+DB_PASSWORD = os.getenv("DB_PASSWORD")  # Make sure this is set in Render
 
-# Absolute path to storage directory
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-STORAGE_PATH = os.path.join(BASE_DIR, "storage")
-DATA_FILE = os.path.join(STORAGE_PATH, "profiles.json")
-ENTRIES_PATH = os.path.join(STORAGE_PATH, "entries.json")
+def get_connection():
+    return psycopg2.connect(
+        host=DB_HOST,
+        database=DB_NAME,
+        user=DB_USER,
+        password=DB_PASSWORD
+    )
 
-# Load entries.json once into memory
-with open(ENTRIES_PATH, "r") as f:
-    calendar_entries = json.load(f)
-
-
-@app.route("/", methods=["GET"])
-def home():
-    return jsonify({"message": "API is running"}), 200
-
-@app.route("/show_profiles", methods=["GET"])
-def show_profiles():
-    try:
-        with open(DATA_FILE, "r") as f:
-            profiles = json.load(f)
-        return jsonify(profiles), 200
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-    
 @app.route("/get_entry", methods=["GET"])
 def get_entry():
-    date_param = request.args.get("date")  # format: M-D
-    if not date_param:
-        return jsonify({"error": "Date parameter missing"}), 400
-
+    month = request.args.get("month")
+    day = request.args.get("day")
     try:
-        month, day = map(int, date_param.split("-"))
-        month = str(month)
-        day = str(day)
-
-        if month in calendar_entries:
-            month_data = calendar_entries[month]
-            theme = month_data.get("theme", "")
-            entry = month_data.get(day, "")
-            return jsonify({"theme": theme, "entry": entry}), 200
-        else:
-            return jsonify({"theme": "", "entry": ""}), 200
+        entry = calendar_data.get(month, {}).get(day, None)
+        if entry:
+            return jsonify(entry)
+        return jsonify({"error": "Entry not found"}), 404
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
 
 @app.route("/create_profile", methods=["POST"])
 def create_profile():
-    data = request.get_json()
-    email = data.get("email")
-    password = data.get("password")
+    data = request.json
+    email = data["email"]
+    password = data["password"]
+    hashed = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt())
 
-    if not email or not password:
-        return jsonify({"error": "Email and password are required"}), 400
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        INSERT INTO profiles (email, password) 
+        VALUES (%s, %s) 
+        ON CONFLICT (email) DO NOTHING
+    """, (email, hashed.decode("utf-8")))
+    conn.commit()
+    cur.close()
+    conn.close()
 
-    try:
-        if os.path.exists(DATA_FILE):
-            with open(DATA_FILE, "r") as f:
-                profiles = json.load(f)
-        else:
-            profiles = {}
+    return jsonify({"message": "Account created"})
 
-        if email in profiles:
-            return jsonify({"error": "Account already exists"}), 400
-
-        # Hash the password
-        hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-
-        profiles[email] = {
-            "email": email,
-            "password": hashed_password
-        }
-
-        with open(DATA_FILE, "w") as f:
-            json.dump(profiles, f, indent=2)
-
-        return jsonify({"message": "Account created"}), 200
-
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-
-
-@app.route('/login', methods=['POST'])
+@app.route("/login", methods=["POST"])
 def login():
-    data = request.get_json()
-    email = data.get('email')
-    input_password = data.get('password')
+    data = request.json
+    email = data["email"]
+    password = data["password"]
 
-    with open(DATA_FILE, 'r') as f:
-        profiles = json.load(f)
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT password FROM profiles WHERE email = %s", (email,))
+    result = cur.fetchone()
+    cur.close()
+    conn.close()
 
-    user = profiles.get(email)
-    if not user or 'password' not in user:
-        return jsonify({"error": "Invalid email or password"}), 401
-
-    stored_hash = user['password'].encode('utf-8')
-
-    if bcrypt.checkpw(input_password.encode('utf-8'), stored_hash):
-        user_copy = {k: v for k, v in user.items() if k != 'password'}
-        return jsonify(user_copy), 200
-    else:
-        return jsonify({"error": "Incorrect password"}), 401
-
+    if result and bcrypt.checkpw(password.encode("utf-8"), result[0].encode("utf-8")):
+        return jsonify({"message": "Login successful"})
+    return jsonify({"error": "Invalid credentials"}), 401
 
 @app.route("/update_profile", methods=["POST"])
 def update_profile():
     data = request.json
-    email = data.get("email")
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        INSERT INTO profiles (email, phone, carrier, method, timezone, time)
+        VALUES (%s, %s, %s, %s, %s, %s)
+        ON CONFLICT (email)
+        DO UPDATE SET
+            phone = EXCLUDED.phone,
+            carrier = EXCLUDED.carrier,
+            method = EXCLUDED.method,
+            timezone = EXCLUDED.timezone,
+            time = EXCLUDED.time
+    """, (
+        data["email"], data["phone"], data["carrier"],
+        data["method"], data["timezone"], data["time"]
+    ))
+    conn.commit()
+    cur.close()
+    conn.close()
+    return jsonify({"status": "success"})
 
-    if not email:
-        return jsonify({"error": "Email is required"}), 400
+@app.route("/get_profile", methods=["GET"])
+def get_profile():
+    email = request.args.get("email")
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT phone, carrier, method, timezone, time 
+        FROM profiles 
+        WHERE email = %s
+    """, (email,))
+    row = cur.fetchone()
+    cur.close()
+    conn.close()
 
-    try:
-        with open(DATA_FILE, "r") as f:
-            profiles = json.load(f)
+    if row:
+        return jsonify({
+            "phone": row[0],
+            "carrier": row[1],
+            "method": row[2],
+            "timezone": row[3],
+            "time": row[4]
+        })
+    return jsonify({})
 
-        if email not in profiles:
-            return jsonify({"error": "Profile not found"}), 404
+@app.route("/show_profiles", methods=["GET"])
+def show_profiles():
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT email, phone, carrier, method, timezone, time 
+        FROM profiles
+    """)
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
 
-        # Keep the existing hashed password
-        password = profiles[email].get("password", "")
-
-        # Update fields
-        profiles[email] = {
-            "email": email,  # keep email in the profile
-            "password": password,
-            "phone": data.get("phone", ""),
-            "carrier": data.get("carrier", ""),
-            "method": data.get("method", "email"),
-            "timezone": data.get("timezone", "0"),
-            "time": data.get("time", "09:00")
-        }
-
-        with open(DATA_FILE, "w") as f:
-            json.dump(profiles, f, indent=2)
-
-        return jsonify({"message": "Profile updated successfully"}), 200
-
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
+    profiles = {
+        email: {
+            "phone": phone,
+            "carrier": carrier,
+            "method": method,
+            "timezone": timezone,
+            "time": time
+        } for (email, phone, carrier, method, timezone, time) in rows
+    }
+    return jsonify(profiles)
 
 """if __name__ == "__main__":
-    # Ensures compatibility with iOS Simulator (localhost resolves to host machine)
-    app.run(host="0.0.0.0", port=5000, debug=True)"""
+    app.run(debug=True)"""
 
