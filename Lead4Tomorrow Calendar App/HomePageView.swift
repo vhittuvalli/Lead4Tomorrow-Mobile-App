@@ -1,4 +1,4 @@
-=import SwiftUI
+import SwiftUI
 
 struct APIConfig {
     static let baseURL = "https://lead4tomorrow-mobile-app.onrender.com"
