@@ -11,6 +11,7 @@ struct SettingsPageView: View {
     @State private var notificationTime = Date()
     @State private var isNotificationsEnabled = false
     @State private var isProfileCollapsed = false
+    @State private var showSaveConfirmation = false
 
     private let carriers = ["att", "tmobile", "verizon", "sprint"]
     private let americanTimezones = [
@@ -69,8 +70,21 @@ struct SettingsPageView: View {
                             }
                         }
 
+                        if showSaveConfirmation {
+                            Text("✅ Profile saved successfully!")
+                                .foregroundColor(.green)
+                                .font(.subheadline)
+                                .padding(.vertical, 4)
+                        }
+
                         Section {
-                            Button(action: saveProfile) {
+                            Button(action: {
+                                if isProfileCollapsed {
+                                    isProfileCollapsed = false
+                                } else {
+                                    saveProfile()
+                                }
+                            }) {
                                 Text(isProfileCollapsed ? "Edit Profile" : "Save Profile")
                                     .foregroundColor(.white)
                                     .padding()
@@ -109,6 +123,10 @@ struct SettingsPageView: View {
             if error == nil {
                 DispatchQueue.main.async {
                     isProfileCollapsed = true
+                    showSaveConfirmation = true
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                        showSaveConfirmation = false
+                    }
                 }
             } else {
                 print("Save error: \(error!)")

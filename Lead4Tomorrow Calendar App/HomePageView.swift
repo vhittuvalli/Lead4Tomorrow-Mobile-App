@@ -15,8 +15,51 @@ struct HomePageView: View {
 
     var body: some View {
         NavigationView {
-            VStack {
-                // Date picker to select a date
+            VStack(spacing: 12) {
+
+                // TOP MESSAGES SECTION
+                Group {
+                    if let error = errorMessage {
+                        Text(error)
+                            .foregroundColor(.white)
+                            .fontWeight(.bold)
+                            .padding()
+                            .frame(maxWidth: .infinity)
+                            .background(Color.red)
+                            .cornerRadius(8)
+                            .padding(.horizontal)
+                    }
+
+                    Text("Theme of the Month: \(theme)")
+                        .font(.title3)
+                        .fontWeight(.semibold)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
+
+                    Text("Selected Date: \(formattedDate(selectedDate))")
+                        .font(.subheadline)
+                        .foregroundColor(.gray)
+                        .padding(.bottom, 5)
+
+                    if entries.isEmpty && !isLoading && errorMessage == nil {
+                        Text("No entries for the selected date.")
+                            .foregroundColor(.orange)
+                            .fontWeight(.medium)
+                            .padding()
+                            .frame(maxWidth: .infinity)
+                            .background(Color.yellow.opacity(0.2))
+                            .cornerRadius(8)
+                            .padding(.horizontal)
+                    }
+
+                    if isLoading {
+                        ProgressView("Loading...").padding()
+                    }
+                }
+
+                Divider().padding(.horizontal)
+
+                // DATE PICKER
                 DatePicker(
                     "Select Date",
                     selection: $selectedDate,
@@ -28,34 +71,14 @@ struct HomePageView: View {
                     fetchEntries(for: formattedRequestDate(newDate))
                 }
 
-                // Display the theme of the month
-                Text("Theme of the Month: \(theme)")
-                    .font(.headline)
-                    .padding()
-
-                // Display the selected date
-                Text("Selected Date: \(formattedDate(selectedDate))")
-                    .padding()
-
-                if isLoading {
-                    ProgressView("Loading...").padding()
-                }
-
-                if let error = errorMessage {
-                    Text(error)
-                        .foregroundColor(.red)
-                        .padding()
-                }
-
-                if entries.isEmpty && !isLoading {
-                    Text("No entries for the selected date.")
-                        .italic()
-                        .padding()
-                } else {
+                // ENTRIES LIST
+                if !entries.isEmpty {
                     List(entries, id: \.self) { entry in
                         Text(entry)
+                            .padding(.vertical, 4)
                     }
                 }
+
             }
             .navigationTitle("Home")
             .onAppear {
