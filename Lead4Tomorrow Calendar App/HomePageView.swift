@@ -38,6 +38,14 @@ struct HomePageView: View {
                         .fontWeight(.semibold)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal)
+                
+                    Link("Visit Lead4Tomorrow Website", destination: URL(string: "https://lead4tomorrow.org")!)
+                        .font(.subheadline)
+                        .foregroundColor(.blue)
+                        .padding(8)
+                        .background(Color.blue.opacity(0.1))
+                        .cornerRadius(8)
+
 
                     // SELECTED DATE
                     Text("Selected Date: \(formattedDate(selectedDate))")
