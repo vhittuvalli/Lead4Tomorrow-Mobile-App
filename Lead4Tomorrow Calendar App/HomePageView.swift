@@ -13,12 +13,14 @@ struct HomePageView: View {
     @State private var isLoading = false
     @State private var errorMessage: String?
 
+    @State private var isExpanded = false
+
     var body: some View {
         NavigationView {
-            VStack(spacing: 12) {
+            ScrollView {
+                VStack(spacing: 12) {
 
-                // TOP MESSAGES SECTION
-                Group {
+                    // ERROR MESSAGE
                     if let error = errorMessage {
                         Text(error)
                             .foregroundColor(.white)
@@ -30,16 +32,60 @@ struct HomePageView: View {
                             .padding(.horizontal)
                     }
 
+                    // THEME
                     Text("Theme of the Month: \(theme)")
                         .font(.title3)
                         .fontWeight(.semibold)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal)
 
+                    // SELECTED DATE
                     Text("Selected Date: \(formattedDate(selectedDate))")
                         .font(.subheadline)
                         .foregroundColor(.gray)
                         .padding(.bottom, 5)
+
+                    // MESSAGE DISPLAY WITH TOGGLE
+                    if let entry = entries.first, !entry.isEmpty {
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
+                                Text("Message")
+                                    .font(.headline)
+                                Spacer()
+                                if isExpanded {
+                                    Button(action: {
+                                        isExpanded = false
+                                    }) {
+                                        Image(systemName: "xmark.circle.fill")
+                                            .foregroundColor(.gray)
+                                    }
+                                }
+                            }
+
+                            if isExpanded {
+                                Text(entry)
+                                    .font(.body)
+                                    .padding()
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .background(Color.blue.opacity(0.1))
+                                    .cornerRadius(8)
+                            } else {
+                                Button(action: {
+                                    isExpanded = true
+                                }) {
+                                    Text(entry)
+                                        .font(.body)
+                                        .lineLimit(3)
+                                        .foregroundColor(.primary)
+                                        .padding()
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .background(Color.blue.opacity(0.1))
+                                        .cornerRadius(8)
+                                }
+                            }
+                        }
+                        .padding(.horizontal)
+                    }
 
                     if entries.isEmpty && !isLoading && errorMessage == nil {
                         Text("No entries for the selected date.")
@@ -55,34 +101,38 @@ struct HomePageView: View {
                     if isLoading {
                         ProgressView("Loading...").padding()
                     }
-                }
 
-                Divider().padding(.horizontal)
+                    Divider().padding(.horizontal)
 
-                // DATE PICKER
-                DatePicker(
-                    "Select Date",
-                    selection: $selectedDate,
-                    displayedComponents: [.date]
-                )
-                .datePickerStyle(GraphicalDatePickerStyle())
-                .padding()
-                .onChange(of: selectedDate) { newDate in
-                    fetchEntries(for: formattedRequestDate(newDate))
-                }
-
-                // ENTRIES LIST
-                if !entries.isEmpty {
-                    List(entries, id: \.self) { entry in
-                        Text(entry)
-                            .padding(.vertical, 4)
+                    // DATE PICKER
+                    DatePicker(
+                        "Select Date",
+                        selection: $selectedDate,
+                        displayedComponents: [.date]
+                    )
+                    .datePickerStyle(GraphicalDatePickerStyle())
+                    .padding()
+                    .onChange(of: selectedDate) { newDate in
+                        fetchEntries(for: formattedRequestDate(newDate))
                     }
-                }
 
-            }
-            .navigationTitle("Home")
-            .onAppear {
-                fetchEntries(for: formattedRequestDate(selectedDate))
+                    // ADDITIONAL ENTRIES (if ever supported)
+                    if entries.count > 1 {
+                        ForEach(entries.dropFirst(), id: \.self) { entry in
+                            Text(entry)
+                                .padding()
+                                .background(Color.gray.opacity(0.1))
+                                .cornerRadius(8)
+                                .padding(.horizontal)
+                        }
+                    }
+
+                }
+                .padding(.top)
+                .navigationTitle("Home")
+                .onAppear {
+                    fetchEntries(for: formattedRequestDate(selectedDate))
+                }
             }
         }
     }
@@ -142,6 +192,9 @@ struct HomePageView: View {
                 } else {
                     self.entries = []
                 }
+
+                // Collapse the box when switching dates
+                self.isExpanded = false
             }
         }.resume()
     }
