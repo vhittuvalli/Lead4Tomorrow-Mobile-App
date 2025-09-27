@@ -5,142 +5,130 @@ struct APIConfig {
 }
 
 struct HomePageView: View {
-    @Binding var loggedInEmail: String
-
     @State private var selectedDate = Date()
     @State private var entries: [String] = []
     @State private var theme: String = ""
     @State private var isLoading = false
     @State private var errorMessage: String?
-
     @State private var isExpanded = false
 
     var body: some View {
-        NavigationView {
-            ScrollView {
-                VStack(spacing: 12) {
+        ScrollView {
+            VStack(spacing: 12) {
 
-                    // ERROR MESSAGE
-                    if let error = errorMessage {
-                        Text(error)
-                            .foregroundColor(.white)
-                            .fontWeight(.bold)
-                            .padding()
-                            .frame(maxWidth: .infinity)
-                            .background(Color.red)
-                            .cornerRadius(8)
-                            .padding(.horizontal)
-                    }
-
-                    // THEME
-                    Text("Theme of the Month: \(theme)")
-                        .font(.title3)
-                        .fontWeight(.semibold)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal)
-                
-                    Link("Visit Lead4Tomorrow Website", destination: URL(string: "https://lead4tomorrow.org")!)
-                        .font(.subheadline)
-                        .foregroundColor(.blue)
-                        .padding(8)
-                        .background(Color.blue.opacity(0.1))
+                // ERROR MESSAGE
+                if let error = errorMessage {
+                    Text(error)
+                        .foregroundColor(.white)
+                        .fontWeight(.bold)
+                        .padding()
+                        .frame(maxWidth: .infinity)
+                        .background(Color.red)
                         .cornerRadius(8)
+                        .padding(.horizontal)
+                }
 
+                // THEME
+                Text("Theme of the Month: \(theme)")
+                    .font(.title3)
+                    .fontWeight(.semibold)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal)
 
-                    // SELECTED DATE
-                    Text("Selected Date: \(formattedDate(selectedDate))")
-                        .font(.subheadline)
-                        .foregroundColor(.gray)
-                        .padding(.bottom, 5)
+                Link("Visit Lead4Tomorrow Website", destination: URL(string: "https://lead4tomorrow.org")!)
+                    .font(.subheadline)
+                    .foregroundColor(.blue)
+                    .padding(8)
+                    .background(Color.blue.opacity(0.1))
+                    .cornerRadius(8)
 
-                    // MESSAGE DISPLAY WITH TOGGLE
-                    if let entry = entries.first, !entry.isEmpty {
-                        VStack(alignment: .leading, spacing: 8) {
-                            HStack {
-                                Text("Message")
-                                    .font(.headline)
-                                Spacer()
-                                if isExpanded {
-                                    Button(action: {
-                                        isExpanded = false
-                                    }) {
-                                        Image(systemName: "xmark.circle.fill")
-                                            .foregroundColor(.gray)
-                                    }
+                // SELECTED DATE
+                Text("Selected Date: \(formattedDate(selectedDate))")
+                    .font(.subheadline)
+                    .foregroundColor(.gray)
+                    .padding(.bottom, 5)
+
+                // MESSAGE DISPLAY WITH TOGGLE
+                if let entry = entries.first, !entry.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Text("Message")
+                                .font(.headline)
+                            Spacer()
+                            if isExpanded {
+                                Button(action: { isExpanded = false }) {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .foregroundColor(.gray)
                                 }
                             }
+                        }
 
-                            if isExpanded {
+                        if isExpanded {
+                            Text(entry)
+                                .font(.body)
+                                .padding()
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .background(Color.blue.opacity(0.1))
+                                .cornerRadius(8)
+                        } else {
+                            Button(action: { isExpanded = true }) {
                                 Text(entry)
                                     .font(.body)
+                                    .lineLimit(3)
+                                    .foregroundColor(.primary)
                                     .padding()
                                     .frame(maxWidth: .infinity, alignment: .leading)
                                     .background(Color.blue.opacity(0.1))
                                     .cornerRadius(8)
-                            } else {
-                                Button(action: {
-                                    isExpanded = true
-                                }) {
-                                    Text(entry)
-                                        .font(.body)
-                                        .lineLimit(3)
-                                        .foregroundColor(.primary)
-                                        .padding()
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                        .background(Color.blue.opacity(0.1))
-                                        .cornerRadius(8)
-                                }
                             }
                         }
-                        .padding(.horizontal)
                     }
+                    .padding(.horizontal)
+                }
 
-                    if entries.isEmpty && !isLoading && errorMessage == nil {
-                        Text("No entries for the selected date.")
-                            .foregroundColor(.orange)
-                            .fontWeight(.medium)
+                if entries.isEmpty && !isLoading && errorMessage == nil {
+                    Text("No entries for the selected date.")
+                        .foregroundColor(.orange)
+                        .fontWeight(.medium)
+                        .padding()
+                        .frame(maxWidth: .infinity)
+                        .background(Color.yellow.opacity(0.2))
+                        .cornerRadius(8)
+                        .padding(.horizontal)
+                }
+
+                if isLoading {
+                    ProgressView("Loading...").padding()
+                }
+
+                Divider().padding(.horizontal)
+
+                // DATE PICKER
+                DatePicker(
+                    "Select Date",
+                    selection: $selectedDate,
+                    displayedComponents: [.date]
+                )
+                .datePickerStyle(GraphicalDatePickerStyle())
+                .padding()
+                .onChange(of: selectedDate) { newDate in
+                    fetchEntries(for: formattedRequestDate(newDate))
+                }
+
+                // ADDITIONAL ENTRIES (if ever supported)
+                if entries.count > 1 {
+                    ForEach(entries.dropFirst(), id: \.self) { entry in
+                        Text(entry)
                             .padding()
-                            .frame(maxWidth: .infinity)
-                            .background(Color.yellow.opacity(0.2))
+                            .background(Color.gray.opacity(0.1))
                             .cornerRadius(8)
                             .padding(.horizontal)
                     }
-
-                    if isLoading {
-                        ProgressView("Loading...").padding()
-                    }
-
-                    Divider().padding(.horizontal)
-
-                    // DATE PICKER
-                    DatePicker(
-                        "Select Date",
-                        selection: $selectedDate,
-                        displayedComponents: [.date]
-                    )
-                    .datePickerStyle(GraphicalDatePickerStyle())
-                    .padding()
-                    .onChange(of: selectedDate) { newDate in
-                        fetchEntries(for: formattedRequestDate(newDate))
-                    }
-
-                    // ADDITIONAL ENTRIES (if ever supported)
-                    if entries.count > 1 {
-                        ForEach(entries.dropFirst(), id: \.self) { entry in
-                            Text(entry)
-                                .padding()
-                                .background(Color.gray.opacity(0.1))
-                                .cornerRadius(8)
-                                .padding(.horizontal)
-                        }
-                    }
-
                 }
-                .padding(.top)
-                .navigationTitle("Home")
-                .onAppear {
-                    fetchEntries(for: formattedRequestDate(selectedDate))
-                }
+            }
+            .padding(.top)
+            .onAppear {
+                fetchEntries(for: formattedRequestDate(selectedDate))
             }
         }
     }
@@ -201,7 +189,6 @@ struct HomePageView: View {
                     self.entries = []
                 }
 
-                // Collapse the box when switching dates
                 self.isExpanded = false
             }
         }.resume()
@@ -209,10 +196,8 @@ struct HomePageView: View {
 }
 
 struct HomePageView_Previews: PreviewProvider {
-    @State static var testEmail = "test@example.com"
-
     static var previews: some View {
-        HomePageView(loggedInEmail: $testEmail)
+        NavigationStack { HomePageView().navigationTitle("Calendar") }
     }
 }
 

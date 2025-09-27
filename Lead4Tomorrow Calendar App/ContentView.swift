@@ -5,17 +5,32 @@ struct ContentView: View {
     @State private var loggedInEmail = ""
 
     var body: some View {
-        if isLoggedIn {
-            MainView(loggedInEmail: $loggedInEmail)
-        } else {
-            LoginView(isLoggedIn: $isLoggedIn, loggedInEmail: $loggedInEmail)
+        TabView {
+            // PUBLIC Calendar tab
+            NavigationStack {
+                HomePageView()
+                    .navigationTitle("Calendar")
+            }
+            .tabItem {
+                Label("Calendar", systemImage: "calendar")
+                // Or: Image(systemName: "calendar"); Text("Calendar")
+            }
+
+            // SETTINGS tab (shows login/create if signed out, settings page if signed in)
+            NavigationStack {
+                SettingsRootView(
+                    isLoggedIn: $isLoggedIn,
+                    loggedInEmail: $loggedInEmail
+                )
+            }
+            .tabItem {
+                Label("Settings", systemImage: "gearshape")
+            }
         }
     }
 }
 
 struct ContentView_Previews: PreviewProvider {
-    static var previews: some View {
-        ContentView()
-    }
+    static var previews: some View { ContentView() }
 }
 

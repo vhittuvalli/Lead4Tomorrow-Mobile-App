@@ -6,27 +6,8 @@
 	objectVersion = 77;
 	objects = {
 
-/* Begin PBXContainerItemProxy section */
-		8BB400642CE005CF00DF3B78 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 8BB4004B2CE005CE00DF3B78 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 8BB400522CE005CE00DF3B78;
-			remoteInfo = "Lead4Tomorrow Calendar App";
-		};
-		8BB4006E2CE005CF00DF3B78 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 8BB4004B2CE005CE00DF3B78 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 8BB400522CE005CE00DF3B78;
-			remoteInfo = "Lead4Tomorrow Calendar App";
-		};
-/* End PBXContainerItemProxy section */
-
 /* Begin PBXFileReference section */
 		8BB400532CE005CE00DF3B78 /* Lead4Tomorrow Calendar App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Lead4Tomorrow Calendar App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
-		8BB400632CE005CF00DF3B78 /* Lead4Tomorrow Calendar AppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Lead4Tomorrow Calendar AppTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
-		8BB4006D2CE005CF00DF3B78 /* Lead4Tomorrow Calendar AppUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Lead4Tomorrow Calendar AppUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -65,20 +46,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		8BB400602CE005CF00DF3B78 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		8BB4006A2CE005CF00DF3B78 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -98,8 +65,6 @@
 			isa = PBXGroup;
 			children = (
 				8BB400532CE005CE00DF3B78 /* Lead4Tomorrow Calendar App.app */,
-				8BB400632CE005CF00DF3B78 /* Lead4Tomorrow Calendar AppTests.xctest */,
-				8BB4006D2CE005CF00DF3B78 /* Lead4Tomorrow Calendar AppUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -131,52 +96,6 @@
 			productReference = 8BB400532CE005CE00DF3B78 /* Lead4Tomorrow Calendar App.app */;
 			productType = "com.apple.product-type.application";
 		};
-		8BB400622CE005CF00DF3B78 /* Lead4Tomorrow Calendar AppTests */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 8BB4007A2CE005CF00DF3B78 /* Build configuration list for PBXNativeTarget "Lead4Tomorrow Calendar AppTests" */;
-			buildPhases = (
-				8BB4005F2CE005CF00DF3B78 /* Sources */,
-				8BB400602CE005CF00DF3B78 /* Frameworks */,
-				8BB400612CE005CF00DF3B78 /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-				8BB400652CE005CF00DF3B78 /* PBXTargetDependency */,
-			);
-			fileSystemSynchronizedGroups = (
-				8BB400662CE005CF00DF3B78 /* Lead4Tomorrow Calendar AppTests */,
-			);
-			name = "Lead4Tomorrow Calendar AppTests";
-			packageProductDependencies = (
-			);
-			productName = "Lead4Tomorrow Calendar AppTests";
-			productReference = 8BB400632CE005CF00DF3B78 /* Lead4Tomorrow Calendar AppTests.xctest */;
-			productType = "com.apple.product-type.bundle.unit-test";
-		};
-		8BB4006C2CE005CF00DF3B78 /* Lead4Tomorrow Calendar AppUITests */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 8BB4007D2CE005CF00DF3B78 /* Build configuration list for PBXNativeTarget "Lead4Tomorrow Calendar AppUITests" */;
-			buildPhases = (
-				8BB400692CE005CF00DF3B78 /* Sources */,
-				8BB4006A2CE005CF00DF3B78 /* Frameworks */,
-				8BB4006B2CE005CF00DF3B78 /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-				8BB4006F2CE005CF00DF3B78 /* PBXTargetDependency */,
-			);
-			fileSystemSynchronizedGroups = (
-				8BB400702CE005CF00DF3B78 /* Lead4Tomorrow Calendar AppUITests */,
-			);
-			name = "Lead4Tomorrow Calendar AppUITests";
-			packageProductDependencies = (
-			);
-			productName = "Lead4Tomorrow Calendar AppUITests";
-			productReference = 8BB4006D2CE005CF00DF3B78 /* Lead4Tomorrow Calendar AppUITests.xctest */;
-			productType = "com.apple.product-type.bundle.ui-testing";
-		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -189,14 +108,6 @@
 				TargetAttributes = {
 					8BB400522CE005CE00DF3B78 = {
 						CreatedOnToolsVersion = 16.1;
-					};
-					8BB400622CE005CF00DF3B78 = {
-						CreatedOnToolsVersion = 16.1;
-						TestTargetID = 8BB400522CE005CE00DF3B78;
-					};
-					8BB4006C2CE005CF00DF3B78 = {
-						CreatedOnToolsVersion = 16.1;
-						TestTargetID = 8BB400522CE005CE00DF3B78;
 					};
 				};
 			};
@@ -215,28 +126,12 @@
 			projectRoot = "";
 			targets = (
 				8BB400522CE005CE00DF3B78 /* Lead4Tomorrow Calendar App */,
-				8BB400622CE005CF00DF3B78 /* Lead4Tomorrow Calendar AppTests */,
-				8BB4006C2CE005CF00DF3B78 /* Lead4Tomorrow Calendar AppUITests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		8BB400512CE005CE00DF3B78 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		8BB400612CE005CF00DF3B78 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		8BB4006B2CE005CF00DF3B78 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -253,34 +148,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		8BB4005F2CE005CF00DF3B78 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		8BB400692CE005CF00DF3B78 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXSourcesBuildPhase section */
-
-/* Begin PBXTargetDependency section */
-		8BB400652CE005CF00DF3B78 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 8BB400522CE005CE00DF3B78 /* Lead4Tomorrow Calendar App */;
-			targetProxy = 8BB400642CE005CF00DF3B78 /* PBXContainerItemProxy */;
-		};
-		8BB4006F2CE005CF00DF3B78 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 8BB400522CE005CE00DF3B78 /* Lead4Tomorrow Calendar App */;
-			targetProxy = 8BB4006E2CE005CF00DF3B78 /* PBXContainerItemProxy */;
-		};
-/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		8BB400752CE005CF00DF3B78 /* Debug */ = {
@@ -410,7 +278,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"Lead4Tomorrow Calendar App/Preview Content\"";
-				DEVELOPMENT_TEAM = GLSJAC9NJP;
+				DEVELOPMENT_TEAM = F6292JRN5H;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -431,7 +299,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Debug;
 		};
@@ -443,7 +311,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"Lead4Tomorrow Calendar App/Preview Content\"";
-				DEVELOPMENT_TEAM = GLSJAC9NJP;
+				DEVELOPMENT_TEAM = F6292JRN5H;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -464,79 +332,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-			};
-			name = Release;
-		};
-		8BB4007B2CE005CF00DF3B78 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = GLSJAC9NJP;
-				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 18.1;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.varunhittuvalli.Lead4Tomorrow-Calendar-AppTests";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Lead4Tomorrow Calendar App.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Lead4Tomorrow Calendar App";
-			};
-			name = Debug;
-		};
-		8BB4007C2CE005CF00DF3B78 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = GLSJAC9NJP;
-				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 18.1;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.varunhittuvalli.Lead4Tomorrow-Calendar-AppTests";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Lead4Tomorrow Calendar App.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Lead4Tomorrow Calendar App";
-			};
-			name = Release;
-		};
-		8BB4007E2CE005CF00DF3B78 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = GLSJAC9NJP;
-				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.varunhittuvalli.Lead4Tomorrow-Calendar-AppUITests";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_TARGET_NAME = "Lead4Tomorrow Calendar App";
-			};
-			name = Debug;
-		};
-		8BB4007F2CE005CF00DF3B78 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = GLSJAC9NJP;
-				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.varunhittuvalli.Lead4Tomorrow-Calendar-AppUITests";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_TARGET_NAME = "Lead4Tomorrow Calendar App";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;
 		};
@@ -557,24 +353,6 @@
 			buildConfigurations = (
 				8BB400782CE005CF00DF3B78 /* Debug */,
 				8BB400792CE005CF00DF3B78 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		8BB4007A2CE005CF00DF3B78 /* Build configuration list for PBXNativeTarget "Lead4Tomorrow Calendar AppTests" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				8BB4007B2CE005CF00DF3B78 /* Debug */,
-				8BB4007C2CE005CF00DF3B78 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		8BB4007D2CE005CF00DF3B78 /* Build configuration list for PBXNativeTarget "Lead4Tomorrow Calendar AppUITests" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				8BB4007E2CE005CF00DF3B78 /* Debug */,
-				8BB4007F2CE005CF00DF3B78 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

@@ -1,7 +1,8 @@
 import SwiftUI
 
 struct CreateAccountView: View {
-    @Environment(\.presentationMode) var presentationMode
+    let onBackToLogin: () -> Void      // NEW: switch back to Login
+
     @State private var email: String = ""
     @State private var password: String = ""
     @State private var confirmPassword: String = ""
@@ -10,14 +11,13 @@ struct CreateAccountView: View {
     var body: some View {
         VStack(spacing: 20) {
             Text("Create Account")
-                .font(.largeTitle)
-                .fontWeight(.bold)
+                .font(.largeTitle).fontWeight(.bold)
 
             TextField("Enter Email", text: $email)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled(true)
                 .padding()
                 .background(RoundedRectangle(cornerRadius: 8).stroke(Color.gray, lineWidth: 1))
-                .autocapitalization(.none)
-                .disableAutocorrection(true)
 
             SecureField("Enter Password", text: $password)
                 .textContentType(.oneTimeCode)
@@ -44,14 +44,13 @@ struct CreateAccountView: View {
                     .background(Color.green)
                     .cornerRadius(8)
             }
+            .contentShape(Rectangle())
 
-            Button(action: { presentationMode.wrappedValue.dismiss() }) {
-                Text("Back to Login")
-                    .foregroundColor(.blue)
+            Button(action: onBackToLogin) {
+                Text("Back to Login").foregroundColor(.blue)
             }
         }
         .padding()
-        .navigationBarHidden(true)
     }
 
     private func createAccount() {
@@ -59,17 +58,12 @@ struct CreateAccountView: View {
             errorMessage = "Email and password are required."
             return
         }
-
         guard password == confirmPassword else {
             errorMessage = "Passwords do not match."
             return
         }
 
-        let profileData: [String: String] = [
-            "email": email,
-            "password": password
-        ]
-
+        let profileData: [String: String] = ["email": email, "password": password]
         guard let url = URL(string: "https://lead4tomorrow-mobile-app.onrender.com/create_profile") else {
             errorMessage = "Invalid backend URL"
             return
@@ -82,34 +76,20 @@ struct CreateAccountView: View {
 
         URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
-                DispatchQueue.main.async {
-                    errorMessage = "Network error: \(error.localizedDescription)"
-                }
+                DispatchQueue.main.async { errorMessage = "Network error: \(error.localizedDescription)" }
                 return
             }
-
-            guard let httpResponse = response as? HTTPURLResponse else {
-                DispatchQueue.main.async {
-                    errorMessage = "Invalid response from server"
-                }
+            guard let http = response as? HTTPURLResponse else {
+                DispatchQueue.main.async { errorMessage = "Invalid response from server" }
                 return
             }
-
-            if httpResponse.statusCode == 200 {
-                DispatchQueue.main.async {
-                    presentationMode.wrappedValue.dismiss()
-                }
+            if http.statusCode == 200 {
+                DispatchQueue.main.async { onBackToLogin() }
+            } else if let data = data,
+                      let msg = try? JSONDecoder().decode([String: String].self, from: data) {
+                DispatchQueue.main.async { errorMessage = msg["error"] ?? "Failed to create account." }
             } else {
-                if let data = data,
-                   let backendMessage = try? JSONDecoder().decode([String: String].self, from: data) {
-                    DispatchQueue.main.async {
-                        errorMessage = backendMessage["error"] ?? "Failed to create account."
-                    }
-                } else {
-                    DispatchQueue.main.async {
-                        errorMessage = "Unknown error occurred."
-                    }
-                }
+                DispatchQueue.main.async { errorMessage = "Unknown error occurred." }
             }
         }.resume()
     }
