@@ -1,9 +1,10 @@
+// FILE: LoginView.swift
 import SwiftUI
 
 struct LoginView: View {
     @Binding var isLoggedIn: Bool
     @Binding var loggedInEmail: String
-    let onCreateAccount: () -> Void    // NEW: switch to Create Account
+    let onCreateAccount: () -> Void
 
     @State private var email: String = ""
     @State private var password: String = ""
@@ -11,8 +12,7 @@ struct LoginView: View {
 
     var body: some View {
         VStack(spacing: 20) {
-            Text("Log In")
-                .font(.largeTitle).fontWeight(.bold)
+            Text("Log In").font(.largeTitle).fontWeight(.bold)
 
             TextField("Enter Email", text: $email)
                 .keyboardType(.emailAddress)
@@ -25,11 +25,8 @@ struct LoginView: View {
                 .padding()
                 .background(RoundedRectangle(cornerRadius: 8).stroke(Color.gray, lineWidth: 1))
 
-            if let errorMessage = errorMessage {
-                Text(errorMessage)
-                    .foregroundColor(.red)
-                    .multilineTextAlignment(.center)
-                    .padding(.top, 10)
+            if let errorMessage {
+                Text(errorMessage).foregroundColor(.red).multilineTextAlignment(.center).padding(.top, 10)
             }
 
             Button(action: login) {
@@ -42,7 +39,6 @@ struct LoginView: View {
             }
             .contentShape(Rectangle())
 
-            // Inline switch (no NavigationLink)
             Button(action: onCreateAccount) {
                 Text("Create Account").foregroundColor(.blue)
             }
@@ -52,27 +48,24 @@ struct LoginView: View {
 
     private func login() {
         guard !email.isEmpty, !password.isEmpty else {
-            errorMessage = "Email and password are required."
-            return
+            errorMessage = "Email and password are required."; return
+        }
+        guard let url = URL(string: "\(APIConfig.baseURL)/login") else {
+            errorMessage = "Invalid backend URL."; return
         }
 
-        guard let url = URL(string: "https://lead4tomorrow-mobile-app.onrender.com/login") else {
-            errorMessage = "Invalid backend URL."
-            return
-        }
+        let payload: [String: String] = ["email": email, "password": password]
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.httpBody = try? JSONEncoder().encode(payload)
 
-        let loginData: [String: String] = ["email": email, "password": password]
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = try? JSONEncoder().encode(loginData)
-
-        URLSession.shared.dataTask(with: request) { _, response, error in
-            if let error = error {
-                DispatchQueue.main.async { errorMessage = "Network error: \(error.localizedDescription)" }
+        URLSession.shared.dataTask(with: req) { _, resp, err in
+            if let err = err {
+                DispatchQueue.main.async { errorMessage = "Network error: \(err.localizedDescription)" }
                 return
             }
-            guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
+            guard let http = resp as? HTTPURLResponse, http.statusCode == 200 else {
                 DispatchQueue.main.async { errorMessage = "Invalid email or password." }
                 return
             }

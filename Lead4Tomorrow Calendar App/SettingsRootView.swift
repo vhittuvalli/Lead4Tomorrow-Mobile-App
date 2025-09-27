@@ -1,3 +1,4 @@
+// FILE: SettingsRootView.swift
 import SwiftUI
 
 enum AuthMode { case login, create }
@@ -10,9 +11,16 @@ struct SettingsRootView: View {
     var body: some View {
         Group {
             if isLoggedIn {
-                // ✅ Show your actual settings page when logged in
-                SettingsPageView(loggedInEmail: loggedInEmail)
-                    .navigationTitle("Settings")
+                // Show your real settings page when signed in
+                VStack(spacing: 0) {
+                    SettingsPageView(loggedInEmail: loggedInEmail)
+                        .navigationTitle("Settings")
+
+                    Divider().padding(.vertical, 8)
+
+                    // Delete Account section (below)
+                    DeleteAccountSection(isLoggedIn: $isLoggedIn, loggedInEmail: $loggedInEmail)
+                }
             } else {
                 VStack(spacing: 16) {
                     Picker("", selection: $mode) {
@@ -28,9 +36,7 @@ struct SettingsRootView: View {
                             onCreateAccount: { mode = .create }
                         )
                     } else {
-                        CreateAccountView(
-                            onBackToLogin: { mode = .login }
-                        )
+                        CreateAccountView(onBackToLogin: { mode = .login })
                     }
 
                     Spacer(minLength: 0)

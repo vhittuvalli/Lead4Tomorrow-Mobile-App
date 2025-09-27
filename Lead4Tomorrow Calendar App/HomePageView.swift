@@ -1,8 +1,5 @@
+// FILE: HomePageView.swift
 import SwiftUI
-
-struct APIConfig {
-    static let baseURL = "https://lead4tomorrow-mobile-app.onrender.com"
-}
 
 struct HomePageView: View {
     @State private var selectedDate = Date()
@@ -16,7 +13,6 @@ struct HomePageView: View {
         ScrollView {
             VStack(spacing: 12) {
 
-                // ERROR MESSAGE
                 if let error = errorMessage {
                     Text(error)
                         .foregroundColor(.white)
@@ -28,37 +24,33 @@ struct HomePageView: View {
                         .padding(.horizontal)
                 }
 
-                // THEME
                 Text("Theme of the Month: \(theme)")
                     .font(.title3)
                     .fontWeight(.semibold)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal)
 
-                Link("Visit Lead4Tomorrow Website", destination: URL(string: "https://lead4tomorrow.org")!)
+                Link("Visit Lead4Tomorrow Website",
+                     destination: URL(string: "https://lead4tomorrow.org")!)
                     .font(.subheadline)
                     .foregroundColor(.blue)
                     .padding(8)
                     .background(Color.blue.opacity(0.1))
                     .cornerRadius(8)
 
-                // SELECTED DATE
                 Text("Selected Date: \(formattedDate(selectedDate))")
                     .font(.subheadline)
                     .foregroundColor(.gray)
                     .padding(.bottom, 5)
 
-                // MESSAGE DISPLAY WITH TOGGLE
                 if let entry = entries.first, !entry.isEmpty {
                     VStack(alignment: .leading, spacing: 8) {
                         HStack {
-                            Text("Message")
-                                .font(.headline)
+                            Text("Message").font(.headline)
                             Spacer()
                             if isExpanded {
-                                Button(action: { isExpanded = false }) {
-                                    Image(systemName: "xmark.circle.fill")
-                                        .foregroundColor(.gray)
+                                Button { isExpanded = false } label: {
+                                    Image(systemName: "xmark.circle.fill").foregroundColor(.gray)
                                 }
                             }
                         }
@@ -71,7 +63,7 @@ struct HomePageView: View {
                                 .background(Color.blue.opacity(0.1))
                                 .cornerRadius(8)
                         } else {
-                            Button(action: { isExpanded = true }) {
+                            Button { isExpanded = true } label: {
                                 Text(entry)
                                     .font(.body)
                                     .lineLimit(3)
@@ -103,19 +95,13 @@ struct HomePageView: View {
 
                 Divider().padding(.horizontal)
 
-                // DATE PICKER
-                DatePicker(
-                    "Select Date",
-                    selection: $selectedDate,
-                    displayedComponents: [.date]
-                )
-                .datePickerStyle(GraphicalDatePickerStyle())
-                .padding()
-                .onChange(of: selectedDate) { newDate in
-                    fetchEntries(for: formattedRequestDate(newDate))
-                }
+                DatePicker("Select Date", selection: $selectedDate, displayedComponents: [.date])
+                    .datePickerStyle(GraphicalDatePickerStyle())
+                    .padding()
+                    .onChange(of: selectedDate) { newDate in
+                        fetchEntries(for: formattedRequestDate(newDate))
+                    }
 
-                // ADDITIONAL ENTRIES (if ever supported)
                 if entries.count > 1 {
                     ForEach(entries.dropFirst(), id: \.self) { entry in
                         Text(entry)
@@ -146,58 +132,47 @@ struct HomePageView: View {
     }
 
     private func fetchEntries(for date: String) {
-        let components = date.split(separator: "-")
-        guard components.count == 2 else {
-            self.errorMessage = "Invalid date format."
-            return
-        }
+        let parts = date.split(separator: "-")
+        guard parts.count == 2 else { errorMessage = "Invalid date format."; return }
 
-        let month = components[0]
-        let day = components[1]
-
+        let month = parts[0], day = parts[1]
         guard let url = URL(string: "\(APIConfig.baseURL)/get_entry?month=\(month)&day=\(day)") else {
-            self.errorMessage = "Invalid URL."
-            return
+            errorMessage = "Invalid URL."; return
         }
 
         isLoading = true
         errorMessage = nil
 
-        URLSession.shared.dataTask(with: url) { data, response, error in
+        URLSession.shared.dataTask(with: url) { data, _, error in
             DispatchQueue.main.async {
-                self.isLoading = false
+                isLoading = false
 
                 if let error = error {
-                    self.entries = []
-                    self.theme = ""
-                    self.errorMessage = "Error: \(error.localizedDescription)"
+                    entries = []; theme = ""
+                    errorMessage = "Error: \(error.localizedDescription)"
                     return
                 }
 
                 guard let data = data,
                       let decoded = try? JSONDecoder().decode([String: String].self, from: data) else {
-                    self.entries = []
-                    self.theme = ""
-                    self.errorMessage = "Failed to load data from server."
+                    entries = []; theme = ""
+                    errorMessage = "Failed to load data from server."
                     return
                 }
 
-                self.theme = decoded["theme"] ?? "No theme available"
+                theme = decoded["theme"] ?? "No theme available"
                 if let entry = decoded["entry"] {
-                    self.entries = [entry]
+                    entries = [entry]
                 } else {
-                    self.entries = []
+                    entries = []
                 }
-
-                self.isExpanded = false
+                isExpanded = false
             }
         }.resume()
     }
 }
 
-struct HomePageView_Previews: PreviewProvider {
-    static var previews: some View {
-        NavigationStack { HomePageView().navigationTitle("Calendar") }
-    }
+#Preview {
+    NavigationStack { HomePageView().navigationTitle("Calendar") }
 }
 

@@ -1,3 +1,4 @@
+// FILE: ContentView.swift
 import SwiftUI
 
 struct ContentView: View {
@@ -13,10 +14,9 @@ struct ContentView: View {
             }
             .tabItem {
                 Label("Calendar", systemImage: "calendar")
-                // Or: Image(systemName: "calendar"); Text("Calendar")
             }
 
-            // SETTINGS tab (shows login/create if signed out, settings page if signed in)
+            // SETTINGS tab (Login/Create when signed out; SettingsPage + Delete when signed in)
             NavigationStack {
                 SettingsRootView(
                     isLoggedIn: $isLoggedIn,
@@ -30,7 +30,7 @@ struct ContentView: View {
     }
 }
 
-struct ContentView_Previews: PreviewProvider {
-    static var previews: some View { ContentView() }
+#Preview {
+    ContentView()
 }
 

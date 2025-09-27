@@ -1,7 +1,8 @@
+// FILE: CreateAccountView.swift
 import SwiftUI
 
 struct CreateAccountView: View {
-    let onBackToLogin: () -> Void      // NEW: switch back to Login
+    let onBackToLogin: () -> Void
 
     @State private var email: String = ""
     @State private var password: String = ""
@@ -10,8 +11,7 @@ struct CreateAccountView: View {
 
     var body: some View {
         VStack(spacing: 20) {
-            Text("Create Account")
-                .font(.largeTitle).fontWeight(.bold)
+            Text("Create Account").font(.largeTitle).fontWeight(.bold)
 
             TextField("Enter Email", text: $email)
                 .textInputAutocapitalization(.never)
@@ -29,11 +29,8 @@ struct CreateAccountView: View {
                 .padding()
                 .background(RoundedRectangle(cornerRadius: 8).stroke(Color.gray, lineWidth: 1))
 
-            if let errorMessage = errorMessage {
-                Text(errorMessage)
-                    .foregroundColor(.red)
-                    .multilineTextAlignment(.center)
-                    .padding(.top, 10)
+            if let errorMessage {
+                Text(errorMessage).foregroundColor(.red).multilineTextAlignment(.center).padding(.top, 10)
             }
 
             Button(action: createAccount) {
@@ -55,31 +52,28 @@ struct CreateAccountView: View {
 
     private func createAccount() {
         guard !email.isEmpty, !password.isEmpty, !confirmPassword.isEmpty else {
-            errorMessage = "Email and password are required."
-            return
+            errorMessage = "Email and password are required."; return
         }
         guard password == confirmPassword else {
-            errorMessage = "Passwords do not match."
-            return
+            errorMessage = "Passwords do not match."; return
         }
 
-        let profileData: [String: String] = ["email": email, "password": password]
-        guard let url = URL(string: "https://lead4tomorrow-mobile-app.onrender.com/create_profile") else {
-            errorMessage = "Invalid backend URL"
-            return
+        guard let url = URL(string: "\(APIConfig.baseURL)/create_profile") else {
+            errorMessage = "Invalid backend URL"; return
         }
 
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = try? JSONEncoder().encode(profileData)
+        let payload: [String: String] = ["email": email, "password": password]
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.httpBody = try? JSONEncoder().encode(payload)
 
-        URLSession.shared.dataTask(with: request) { data, response, error in
-            if let error = error {
-                DispatchQueue.main.async { errorMessage = "Network error: \(error.localizedDescription)" }
+        URLSession.shared.dataTask(with: req) { data, resp, err in
+            if let err = err {
+                DispatchQueue.main.async { errorMessage = "Network error: \(err.localizedDescription)" }
                 return
             }
-            guard let http = response as? HTTPURLResponse else {
+            guard let http = resp as? HTTPURLResponse else {
                 DispatchQueue.main.async { errorMessage = "Invalid response from server" }
                 return
             }

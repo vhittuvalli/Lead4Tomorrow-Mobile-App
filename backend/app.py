@@ -151,6 +151,47 @@ def show_profiles():
         } for (email, phone, carrier, method, timezone, time) in rows
     }
     return jsonify(profiles)
+# ADD THIS to your Flask app (e.g., below show_profiles)
+
+@app.route("/delete_profile", methods=["POST", "DELETE"])
+def delete_profile():
+    """
+    Deletes a profile by email.
+    Accepts:
+      - POST with JSON body: {"email": "<user@example.com>"}
+      - DELETE with ?email=<...> query string
+      - POST form-encoded: email=<...>
+    Returns 200 whether deleted or not found (idempotent UX).
+    """
+    # Get email from JSON, query param, or form
+    email = None
+    if request.is_json:
+        data = request.get_json(silent=True) or {}
+        email = data.get("email")
+    if not email:
+        email = request.args.get("email") or request.form.get("email")
+
+    if not email:
+        return jsonify({"error": "email required"}), 400
+
+    try:
+        with get_connection() as conn:
+            cur = conn.cursor()
+            cur.execute("DELETE FROM profiles WHERE email = %s RETURNING email", (email,))
+            deleted = cur.fetchone()
+            cur.close()
+        if deleted:
+            return jsonify({"status": "deleted", "email": email}), 200
+        else:
+            return jsonify({"status": "not_found", "email": email}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# TEMP helper: list routes so you can verify the deploy has the new endpoint
+@app.route("/routes", methods=["GET"])
+def routes():
+    return jsonify(sorted([str(r.rule) for r in app.url_map.iter_rules()]))
 
 # Uncomment this for local testing
 # if __name__ == "__main__":
