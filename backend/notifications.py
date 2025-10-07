@@ -4,6 +4,7 @@ import time
 from L4T_calendar import L4T_Calendar
 import logging
 import requests
+import os
 
 # Initialize calendar and logging
 calendar = L4T_Calendar()
@@ -11,8 +12,8 @@ log = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
 # Gmail credentials (app password only)
-username = "scoutingtmobile@gmail.com"
-password = "bffo pepe ftcd fgyq"
+username = os.environ.get("GMAIL_USER")
+password = os.environ.get("GMAIL_PASS")
 
 # Carrier gateways for SMS
 CARRIERS = {
