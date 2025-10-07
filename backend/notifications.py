@@ -14,7 +14,7 @@ logging.basicConfig(level=logging.INFO)
 # Gmail credentials (app password only)
 username = os.environ.get("GMAIL_USER")
 password = os.environ.get("GMAIL_PASS")
- 
+
 # Carrier gateways for SMS
 CARRIERS = {
     "att": "@mms.att.net",
@@ -23,8 +23,12 @@ CARRIERS = {
     "sprint": "@messaging.sprintpcs.com",
 }
 
+def get_daily_theme(day: str) -> str:
+    with open("storage/daily_themes.json") as f:
+        return dict(json.load(f))[day]
+
 # Fetch profiles from live backend
-def get_profiles():
+def get_profiles(): 
     try:
         response = requests.get("https://lead4tomorrow-mobile-app.onrender.com/show_profiles", timeout=10)
         response.raise_for_status()
@@ -67,12 +71,14 @@ while True:
                 subject = f"Lead4Tomorrow Calendar {today_short['month']}/{today_short['day']}"
                 message = f"""We hope this message finds you well!
 
+Today is {get_daily_theme(today_long["day"])} {today_long["day"]}, {today_long["month"]} {today_short["day"]}. {entry["entry"]}
+
 {today_long["month"]} is {entry["theme"]}.
-Today is {today_long["day"]}, {today_long["month"]} {today_short["day"]}. {entry["entry"]}
 
 Have a wonderful day,
 Lead4Tomorrow
 """
+                
                 if profile["method"] == "email":
                     send_email(email, subject, message)
                 elif profile["method"] == "text":

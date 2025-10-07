@@ -34,7 +34,7 @@ class L4T_Calendar:
         today = self.get_curr_time(timezone)
 
         if not long_form:
-            return {"month": today.strftime("%-m"), "day": today.strftime("%-d")}
+            return {"month": today.strftime("%m"), "day": today.strftime("%d")}
         else:
             return {"month": today.strftime("%B"), "day": today.strftime("%A")}
 
@@ -81,4 +81,3 @@ class L4T_Calendar:
 if __name__ == "__main__":
     log = logging.getLogger(__name__)
     logging.basicConfig(filename=utils.create_log_path(__file__), level=logging.INFO)
-
