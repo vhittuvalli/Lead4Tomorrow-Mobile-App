@@ -11,16 +11,9 @@ struct SettingsRootView: View {
     var body: some View {
         Group {
             if isLoggedIn {
-                // Show your real settings page when signed in
-                VStack(spacing: 0) {
-                    SettingsPageView(loggedInEmail: loggedInEmail)
-                        .navigationTitle("Settings")
-
-                    Divider().padding(.vertical, 8)
-
-                    // Delete Account section (below)
-                    DeleteAccountSection(isLoggedIn: $isLoggedIn, loggedInEmail: $loggedInEmail)
-                }
+                // Single full-height screen: settings + delete account inside one form
+                SettingsPageView(isLoggedIn: $isLoggedIn, loggedInEmail: $loggedInEmail)
+                    .navigationTitle("Settings")
             } else {
                 VStack(spacing: 16) {
                     Picker("", selection: $mode) {
