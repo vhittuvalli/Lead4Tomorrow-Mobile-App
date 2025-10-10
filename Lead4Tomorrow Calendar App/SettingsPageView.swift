@@ -25,81 +25,84 @@ struct SettingsPageView: View {
     ]
 
     var body: some View {
-        NavigationView {
-            Form {
-                Section(header: Text("Notifications")) {
-                    Toggle("Enable Notifications", isOn: $isNotificationsEnabled)
-                        .onChange(of: isNotificationsEnabled) { value in
-                            if !value {
-                                UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
-                                resetFields()
-                            }
+        Form {
+            Section(header: Text("Notifications")) {
+                Toggle("Enable Notifications", isOn: $isNotificationsEnabled)
+                    .onChange(of: isNotificationsEnabled) { value in
+                        if !value {
+                            UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
+                            resetFields()
                         }
+                    }
 
-                    if isNotificationsEnabled {
-                        if isProfileCollapsed {
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text("Notification Time: \(formattedTime(notificationTime))")
-                                Text("Method: \(preferredMethod)")
-                                Text("Phone: \(phoneNumber) (\(carrier.capitalized))")
-                                Text("Timezone: \(selectedTimezone)")
-                            }
-                        } else {
-                            Picker("Preferred Method", selection: $preferredMethod) {
-                                Text("Email").tag("Email")
-                                Text("Text").tag("Text")
-                            }.pickerStyle(SegmentedPickerStyle())
+                if isNotificationsEnabled {
+                    if isProfileCollapsed {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Notification Time: \(formattedTime(notificationTime))")
+                            Text("Method: \(preferredMethod)")
+                            Text("Phone: \(phoneNumber) (\(carrier.capitalized))")
+                            Text("Timezone: \(selectedTimezone)")
+                        }
+                    } else {
+                        Picker("Preferred Method", selection: $preferredMethod) {
+                            Text("Email").tag("Email")
+                            Text("Text").tag("Text")
+                        }
+                        .pickerStyle(SegmentedPickerStyle())
 
-                            DatePicker("Notification Time", selection: $notificationTime, displayedComponents: .hourAndMinute)
+                        DatePicker(
+                            "Notification Time",
+                            selection: $notificationTime,
+                            displayedComponents: .hourAndMinute
+                        )
 
-                            if preferredMethod == "Text" {
-                                TextField("Enter Phone Number", text: $phoneNumber)
-                                    .keyboardType(.phonePad)
+                        if preferredMethod == "Text" {
+                            TextField("Enter Phone Number", text: $phoneNumber)
+                                .keyboardType(.phonePad)
 
-                                Picker("Carrier", selection: $carrier) {
-                                    ForEach(carriers, id: \.self) { carrier in
-                                        Text(carrier.capitalized).tag(carrier)
-                                    }
-                                }
-                            }
-
-                            Picker("Select Timezone", selection: $selectedTimezone) {
-                                ForEach(americanTimezones, id: \.0) { tz in
-                                    Text(tz.1).tag(tz.0)
+                            Picker("Carrier", selection: $carrier) {
+                                ForEach(carriers, id: \.self) { carrier in
+                                    Text(carrier.capitalized).tag(carrier)
                                 }
                             }
                         }
 
-                        if showSaveConfirmation {
-                            Text("✅ Profile saved successfully!")
-                                .foregroundColor(.green)
-                                .font(.subheadline)
-                                .padding(.vertical, 4)
-                        }
-
-                        Section {
-                            Button(action: {
-                                if isProfileCollapsed {
-                                    isProfileCollapsed = false
-                                } else {
-                                    saveProfile()
-                                }
-                            }) {
-                                Text(isProfileCollapsed ? "Edit Profile" : "Save Profile")
-                                    .foregroundColor(.white)
-                                    .padding()
-                                    .frame(maxWidth: .infinity)
-                                    .background(isProfileCollapsed ? Color.orange : Color.blue)
-                                    .cornerRadius(8)
+                        Picker("Select Timezone", selection: $selectedTimezone) {
+                            ForEach(americanTimezones, id: \.0) { tz in
+                                Text(tz.1).tag(tz.0)
                             }
+                        }
+                    }
+
+                    if showSaveConfirmation {
+                        Text("✅ Profile saved successfully!")
+                            .foregroundColor(.green)
+                            .font(.subheadline)
+                            .padding(.vertical, 4)
+                    }
+
+                    Section {
+                        Button(action: {
+                            if isProfileCollapsed {
+                                isProfileCollapsed = false
+                            } else {
+                                saveProfile()
+                            }
+                        }) {
+                            Text(isProfileCollapsed ? "Edit Profile" : "Save Profile")
+                                .foregroundColor(.white)
+                                .padding()
+                                .frame(maxWidth: .infinity)
+                                .background(isProfileCollapsed ? Color.orange : Color.blue)
+                                .cornerRadius(8)
                         }
                     }
                 }
             }
-            .navigationTitle("Settings")
-            .onAppear(perform: loadProfile)
         }
+        .onAppear(perform: loadProfile)
     }
+
 
     private func saveProfile() {
         guard let url = URL(string: "https://lead4tomorrow-mobile-app.onrender.com/update_profile") else { return }
