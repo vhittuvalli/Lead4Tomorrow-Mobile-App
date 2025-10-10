@@ -9,10 +9,16 @@ struct HomePageView: View {
     @State private var errorMessage: String?
     @State private var isExpanded = false
 
+    // Helper used by DatePicker range and clamping
+    private var today: Date {
+        Calendar.current.startOfDay(for: Date())
+    }
+
     var body: some View {
         ScrollView {
             VStack(spacing: 12) {
 
+                // Error banner
                 if let error = errorMessage {
                     Text(error)
                         .foregroundColor(.white)
@@ -24,6 +30,7 @@ struct HomePageView: View {
                         .padding(.horizontal)
                 }
 
+                // Theme
                 Text("Theme of the Month: \(theme)")
                     .font(.title3)
                     .fontWeight(.semibold)
@@ -38,11 +45,13 @@ struct HomePageView: View {
                     .background(Color.blue.opacity(0.1))
                     .cornerRadius(8)
 
+                // Selected date label
                 Text("Selected Date: \(formattedDate(selectedDate))")
                     .font(.subheadline)
                     .foregroundColor(.gray)
                     .padding(.bottom, 5)
 
+                // Entry card (collapsible)
                 if let entry = entries.first, !entry.isEmpty {
                     VStack(alignment: .leading, spacing: 8) {
                         HStack {
@@ -50,7 +59,8 @@ struct HomePageView: View {
                             Spacer()
                             if isExpanded {
                                 Button { isExpanded = false } label: {
-                                    Image(systemName: "xmark.circle.fill").foregroundColor(.gray)
+                                    Image(systemName: "xmark.circle.fill")
+                                        .foregroundColor(.gray)
                                 }
                             }
                         }
@@ -78,6 +88,7 @@ struct HomePageView: View {
                     .padding(.horizontal)
                 }
 
+                // Empty state
                 if entries.isEmpty && !isLoading && errorMessage == nil {
                     Text("No entries for the selected date.")
                         .foregroundColor(.orange)
@@ -89,35 +100,37 @@ struct HomePageView: View {
                         .padding(.horizontal)
                 }
 
+                // Loading
                 if isLoading {
                     ProgressView("Loading...").padding()
                 }
 
                 Divider().padding(.horizontal)
 
-                DatePicker("Select Date", selection: $selectedDate, displayedComponents: [.date])
-                    .datePickerStyle(GraphicalDatePickerStyle())
-                    .padding()
-                    .onChange(of: selectedDate) { newDate in
-                        fetchEntries(for: formattedRequestDate(newDate))
-                    }
-
-                if entries.count > 1 {
-                    ForEach(entries.dropFirst(), id: \.self) { entry in
-                        Text(entry)
-                            .padding()
-                            .background(Color.gray.opacity(0.1))
-                            .cornerRadius(8)
-                            .padding(.horizontal)
-                    }
+                // Date picker (no future dates)
+                DatePicker(
+                    "Select Date",
+                    selection: $selectedDate,
+                    in: ...today,
+                    displayedComponents: [.date]
+                )
+                .datePickerStyle(GraphicalDatePickerStyle())
+                .onChange(of: selectedDate) { newDate in
+                    // Clamp just in case
+                    let clamped = min(Calendar.current.startOfDay(for: newDate), today)
+                    if clamped != newDate { selectedDate = clamped }
+                    fetchEntries(for: formattedRequestDate(clamped))
                 }
-            }
-            .padding(.top)
-            .onAppear {
-                fetchEntries(for: formattedRequestDate(selectedDate))
+                .onAppear {
+                    // Snap to today if needed, then fetch
+                    if selectedDate > today { selectedDate = today }
+                    fetchEntries(for: formattedRequestDate(selectedDate))
+                }
             }
         }
     }
+
+    // MARK: - Helpers
 
     private func formattedDate(_ date: Date) -> String {
         let formatter = DateFormatter()
@@ -133,11 +146,15 @@ struct HomePageView: View {
 
     private func fetchEntries(for date: String) {
         let parts = date.split(separator: "-")
-        guard parts.count == 2 else { errorMessage = "Invalid date format."; return }
+        guard parts.count == 2 else {
+            errorMessage = "Invalid date format."
+            return
+        }
 
         let month = parts[0], day = parts[1]
         guard let url = URL(string: "\(APIConfig.baseURL)/get_entry?month=\(month)&day=\(day)") else {
-            errorMessage = "Invalid URL."; return
+            errorMessage = "Invalid URL."
+            return
         }
 
         isLoading = true
@@ -148,14 +165,18 @@ struct HomePageView: View {
                 isLoading = false
 
                 if let error = error {
-                    entries = []; theme = ""
+                    entries = []
+                    theme = ""
                     errorMessage = "Error: \(error.localizedDescription)"
                     return
                 }
 
-                guard let data = data,
-                      let decoded = try? JSONDecoder().decode([String: String].self, from: data) else {
-                    entries = []; theme = ""
+                guard
+                    let data = data,
+                    let decoded = try? JSONDecoder().decode([String: String].self, from: data)
+                else {
+                    entries = []
+                    theme = ""
                     errorMessage = "Failed to load data from server."
                     return
                 }
@@ -172,7 +193,11 @@ struct HomePageView: View {
     }
 }
 
+// Preview
 #Preview {
-    NavigationStack { HomePageView().navigationTitle("Calendar") }
+    NavigationStack {
+        HomePageView()
+            .navigationTitle("Calendar")
+    }
 }
 
