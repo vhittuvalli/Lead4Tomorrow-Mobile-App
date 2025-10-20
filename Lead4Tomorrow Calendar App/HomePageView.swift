@@ -1,4 +1,3 @@
-// FILE: HomePageView.swift
 import SwiftUI
 
 struct HomePageView: View {
@@ -12,6 +11,22 @@ struct HomePageView: View {
     // Helper used by DatePicker range and clamping
     private var today: Date {
         Calendar.current.startOfDay(for: Date())
+    }
+
+    // NEW: Theme-of-the-day based on weekday
+    private func dayTheme(for date: Date) -> String {
+        let weekday = Calendar.current.component(.weekday, from: date)
+        // Apple weekday: 1=Sunday, 2=Monday, ... 7=Saturday
+        switch weekday {
+        case 2: return "Mindful Mondays"
+        case 3: return "Thoughtful Tuesdays"
+        case 4: return "What's-Up Wednesdays"
+        case 5: return "Thankful Thursdays"
+        case 6: return "Fast Fact Fridays"
+        case 7: return "Self-care Saturdays"
+        case 1: return "Strong Family Sundays"
+        default: return "Daily Theme"
+        }
     }
 
     var body: some View {
@@ -128,6 +143,9 @@ struct HomePageView: View {
                 }
             }
         }
+        // UPDATED: navigation title now shows the theme of the day
+        .navigationTitle(dayTheme(for: selectedDate))
+        .navigationBarTitleDisplayMode(.inline)
     }
 
     // MARK: - Helpers
@@ -197,7 +215,8 @@ struct HomePageView: View {
 #Preview {
     NavigationStack {
         HomePageView()
-            .navigationTitle("Calendar")
+            // Title updates dynamically with today's weekday in the preview
+            .navigationTitle(" ")
     }
 }
 
