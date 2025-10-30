@@ -30,105 +30,105 @@ struct HomePageView: View {
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 12) {
+            VStack(spacing: 14) {
 
                 // Error banner
                 if let error = errorMessage {
                     Text(error)
-                        .foregroundColor(.white)
-                        .fontWeight(.bold)
+                        .font(AppTheme.body(15, weight: .semibold))
+                        .foregroundColor(AppTheme.errorText)
                         .padding()
                         .frame(maxWidth: .infinity)
-                        .background(Color.red)
-                        .cornerRadius(8)
+                        .background(AppTheme.errorBG)
+                        .cornerRadius(10)
                         .padding(.horizontal)
                 }
 
-                // Theme
+                // Theme of Month
                 Text("Theme of the Month: \(theme)")
-                    .font(.title3)
-                    .fontWeight(.semibold)
+                    .font(AppTheme.heading(18, weight: .semibold))
                     .multilineTextAlignment(.center)
+                    .foregroundColor(AppTheme.green)
                     .padding(.horizontal)
 
+                // Site link (accent)
                 Link("Visit Lead4Tomorrow Website",
                      destination: URL(string: "https://lead4tomorrow.org")!)
-                    .font(.subheadline)
-                    .foregroundColor(.blue)
-                    .padding(8)
-                    .background(Color.blue.opacity(0.1))
-                    .cornerRadius(8)
+                    .font(AppTheme.body(15, weight: .medium))
+                    .foregroundColor(AppTheme.link)
+                    .padding(.vertical, 8)
+                    .padding(.horizontal, 10)
+                    .background(AppTheme.backgroundCard)
+                    .cornerRadius(10)
 
                 // Selected date label
                 Text("Selected Date: \(formattedDate(selectedDate))")
-                    .font(.subheadline)
-                    .foregroundColor(.gray)
-                    .padding(.bottom, 5)
+                    .font(AppTheme.body(14))
+                    .foregroundColor(AppTheme.textSecondary)
+                    .padding(.bottom, 4)
 
                 // Entry card (collapsible)
                 if let entry = entries.first, !entry.isEmpty {
-                    VStack(alignment: .leading, spacing: 8) {
+                    VStack(alignment: .leading, spacing: 10) {
                         HStack {
-                            Text("Message").font(.headline)
+                            Text("Message")
+                                .modifier(ThemedSectionTitle())
                             Spacer()
                             if isExpanded {
                                 Button { isExpanded = false } label: {
                                     Image(systemName: "xmark.circle.fill")
-                                        .foregroundColor(.gray)
+                                        .foregroundColor(AppTheme.textSecondary)
                                 }
+                                .accessibilityLabel("Collapse message")
                             }
                         }
 
                         if isExpanded {
-                            VStack(alignment: .leading, spacing: 10) {
-                                // Use Markdown to make URLs tappable
+                            VStack(alignment: .leading, spacing: 12) {
+                                // Markdown-capable body
                                 if let md = try? AttributedString(markdown: entry) {
-                                    Text(md)
-                                        .font(.body)
-                                        .textSelection(.enabled)
-                                        .padding()
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                        .background(Color.blue.opacity(0.1))
-                                        .cornerRadius(8)
+                                    ThemedCard {
+                                        Text(md)
+                                            .font(AppTheme.body())
+                                            .foregroundColor(AppTheme.textPrimary)
+                                            .textSelection(.enabled)
+                                    }
                                 } else {
-                                    Text(entry)
-                                        .font(.body)
-                                        .padding()
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                        .background(Color.blue.opacity(0.1))
-                                        .cornerRadius(8)
+                                    ThemedCard {
+                                        Text(entry)
+                                            .font(AppTheme.body())
+                                            .foregroundColor(AppTheme.textPrimary)
+                                    }
                                 }
 
                                 // Detect and embed YouTube video (if present)
                                 if let youtubeURL = extractYouTubeURL(from: entry) {
                                     YouTubeWebView(url: youtubeURL)
                                         .frame(height: 220)
-                                        .cornerRadius(10)
-                                        .shadow(radius: 3)
+                                        .cornerRadius(12)
+                                        .shadow(color: .black.opacity(0.12), radius: 4, x: 0, y: 2)
                                 }
 
                                 // Detect and show all other links
                                 ForEach(extractAllLinks(from: entry)
-                                            .filter { !$0.absoluteString.contains("youtube") },
-                                        id: \.self) { url in
-                                    Link(destination: url) {
-                                        Label(url.absoluteString, systemImage: "link")
-                                    }
-                                    .font(.subheadline)
-                                    .foregroundColor(.blue)
+                                    .filter { !$0.absoluteString.contains("youtube") }, id: \.self) { url in
+                                        Link(destination: url) {
+                                            Label(url.absoluteString, systemImage: "link")
+                                        }
+                                        .font(AppTheme.body(14, weight: .medium))
+                                        .foregroundColor(AppTheme.link)
                                 }
                             }
                         } else {
                             Button { isExpanded = true } label: {
-                                Text(entry)
-                                    .font(.body)
-                                    .lineLimit(3)
-                                    .foregroundColor(.primary)
-                                    .padding()
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .background(Color.blue.opacity(0.1))
-                                    .cornerRadius(8)
+                                ThemedCard {
+                                    Text(entry)
+                                        .font(AppTheme.body())
+                                        .lineLimit(3)
+                                        .foregroundColor(AppTheme.textPrimary)
+                                }
                             }
+                            .accessibilityLabel("Expand message")
                         }
                     }
                     .padding(.horizontal)
@@ -136,22 +136,26 @@ struct HomePageView: View {
 
                 // Empty state
                 if entries.isEmpty && !isLoading && errorMessage == nil {
-                    Text("No entries for the selected date.")
-                        .foregroundColor(.orange)
-                        .fontWeight(.medium)
-                        .padding()
-                        .frame(maxWidth: .infinity)
-                        .background(Color.yellow.opacity(0.2))
-                        .cornerRadius(8)
-                        .padding(.horizontal)
+                    ThemedCard {
+                        Text("No entries for the selected date.")
+                            .font(AppTheme.body(15, weight: .medium))
+                            .foregroundColor(AppTheme.brown) // a warm neutral callout
+                    }
+                    .padding(.horizontal)
                 }
 
                 if isLoading {
-                    ProgressView("Loading...").padding()
+                    ProgressView("Loading...")
+                        .font(AppTheme.body(15))
+                        .tint(AppTheme.accent)
+                        .padding(.vertical, 6)
                 }
 
-                Divider().padding(.horizontal)
+                Divider()
+                    .overlay(AppTheme.backgroundSoft)
+                    .padding(.horizontal)
 
+                // Date Picker
                 DatePicker(
                     "Select Date",
                     selection: $selectedDate,
@@ -159,6 +163,9 @@ struct HomePageView: View {
                     displayedComponents: [.date]
                 )
                 .datePickerStyle(GraphicalDatePickerStyle())
+                .tint(AppTheme.accent)
+                .font(AppTheme.body(15))
+                .padding(.horizontal)
                 .onChange(of: selectedDate) { newDate in
                     let clamped = min(Calendar.current.startOfDay(for: newDate), today)
                     if clamped != newDate { selectedDate = clamped }
@@ -169,9 +176,14 @@ struct HomePageView: View {
                     fetchEntries(for: formattedRequestDate(selectedDate))
                 }
             }
+            .padding(.vertical, 12)
         }
+        .background(AppTheme.backgroundSoft.ignoresSafeArea())
         .navigationTitle(dayTheme(for: selectedDate))
         .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(AppTheme.backgroundSoft, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
+        .tint(AppTheme.accent) // global accent within this screen
     }
 
     // MARK: - Helpers

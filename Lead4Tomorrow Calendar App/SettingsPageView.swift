@@ -32,15 +32,26 @@ struct SettingsPageView: View {
 
     var body: some View {
         Form {
-            // ACCOUNT (compact; placed first so it’s visible without scrolling)
-            Section(header: Text("Account")) {
+            // ACCOUNT
+            Section(header:
+                        Text("Account")
+                        .font(AppTheme.heading(18, weight: .semibold))
+                        .foregroundColor(AppTheme.green)
+            ) {
                 Text("Signed in as \(loggedInEmail)")
-                    .font(.subheadline)
+                    .font(AppTheme.body(15))
+                    .foregroundColor(AppTheme.textSecondary)
 
-                Button("Sign Out") {
+                Button {
                     isLoggedIn = false
                     loggedInEmail = ""
+                } label: {
+                    Text("Sign Out")
+                        .font(AppTheme.body(16, weight: .medium))
+                        .frame(maxWidth: .infinity, alignment: .center)
                 }
+                .tint(AppTheme.accent)
+                .buttonStyle(.bordered)
 
                 Button(role: .destructive) {
                     showDeleteConfirm = true
@@ -50,8 +61,12 @@ struct SettingsPageView: View {
                             .frame(maxWidth: .infinity, alignment: .center)
                     } else {
                         Text("Delete Account")
+                            .font(AppTheme.body(16, weight: .medium))
+                            .frame(maxWidth: .infinity, alignment: .center)
                     }
                 }
+                .tint(AppTheme.rose)
+                .buttonStyle(.borderedProminent)
                 .alert("Delete your account?",
                        isPresented: $showDeleteConfirm) {
                     Button("Delete", role: .destructive) { deleteAccount() }
@@ -62,8 +77,14 @@ struct SettingsPageView: View {
             }
 
             // NOTIFICATIONS
-            Section(header: Text("Notifications")) {
+            Section(header:
+                        Text("Notifications")
+                        .font(AppTheme.heading(18, weight: .semibold))
+                        .foregroundColor(AppTheme.green)
+            ) {
                 Toggle("Enable Notifications", isOn: $isNotificationsEnabled)
+                    .font(AppTheme.body(16))
+                    .tint(AppTheme.accent)
                     .onChange(of: isNotificationsEnabled) { enabled in
                         if !enabled {
                             UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
@@ -77,7 +98,9 @@ struct SettingsPageView: View {
                         Text("Email").tag("Email")
                         Text("Text").tag("Text")
                     }
+                    .font(AppTheme.body(16))
                     .pickerStyle(.segmented)
+                    .tint(AppTheme.accent)
 
                     if isProfileCollapsed {
                         // Collapsed summary
@@ -89,36 +112,46 @@ struct SettingsPageView: View {
                             Text("Timezone: \(selectedTimezone)")
                             Text("Notification Time: \(formattedTime(notificationTime))")
                         }
+                        .font(AppTheme.body(15))
+                        .foregroundColor(AppTheme.textSecondary)
+                        .padding(10)
+                        .background(AppTheme.backgroundCard)
+                        .cornerRadius(10)
                     } else {
                         // Editable fields
                         if preferredMethod == "Text" {
                             TextField("Enter Phone Number", text: $phoneNumber)
                                 .keyboardType(.phonePad)
+                                .font(AppTheme.body(16))
+                        }
 
-                            Picker("Carrier", selection: $carrier) {
-                                ForEach(carriers, id: \.self) { c in
-                                    Text(c.capitalized).tag(c)
-                                }
+                        Picker("Carrier", selection: $carrier) {
+                            ForEach(carriers, id: \.self) { c in
+                                Text(c.capitalized).tag(c)
                             }
                         }
+                        .font(AppTheme.body(16))
 
                         Picker("Select Timezone", selection: $selectedTimezone) {
                             ForEach(americanTimezones, id: \.0) { tz in
                                 Text(tz.1).tag(tz.0)
                             }
                         }
+                        .font(AppTheme.body(16))
 
                         DatePicker(
                             "Notification Time",
                             selection: $notificationTime,
                             displayedComponents: .hourAndMinute
                         )
+                        .font(AppTheme.body(16))
+                        .tint(AppTheme.accent)
                     }
 
                     if showSaveConfirmation {
                         Text("✅ Profile saved successfully!")
-                            .foregroundColor(.green)
-                            .font(.subheadline)
+                            .font(AppTheme.body(14, weight: .medium))
+                            .foregroundColor(AppTheme.brightGreen)
                             .padding(.vertical, 4)
                     }
 
@@ -131,17 +164,25 @@ struct SettingsPageView: View {
                             }
                         }) {
                             Text(isProfileCollapsed ? "Edit Profile" : "Save Profile")
+                                .font(AppTheme.body(16, weight: .semibold))
                                 .foregroundColor(.white)
                                 .padding()
                                 .frame(maxWidth: .infinity)
-                                .background(isProfileCollapsed ? Color.orange : Color.blue)
-                                .cornerRadius(8)
+                                .background(isProfileCollapsed ? AppTheme.brown : AppTheme.brightGreen)
+                                .cornerRadius(10)
                         }
+                        .listRowInsets(EdgeInsets())
+                        .listRowBackground(Color.clear)
                     }
                 }
             }
         }
+        .font(AppTheme.body(16)) // base font for the form
+        .tint(AppTheme.accent)   // default accent within this screen
+        .scrollContentBackground(.hidden)
+        .background(AppTheme.backgroundSoft.ignoresSafeArea())
         .onAppear(perform: loadProfile)
+        .navigationBarTitleDisplayMode(.inline)
     }
 
     // MARK: - Delete account (inline)
