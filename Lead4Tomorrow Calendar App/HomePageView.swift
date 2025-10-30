@@ -1,4 +1,5 @@
 import SwiftUI
+import WebKit
 
 struct HomePageView: View {
     @State private var selectedDate = Date()
@@ -13,10 +14,8 @@ struct HomePageView: View {
         Calendar.current.startOfDay(for: Date())
     }
 
-    // NEW: Theme-of-the-day based on weekday
     private func dayTheme(for date: Date) -> String {
         let weekday = Calendar.current.component(.weekday, from: date)
-        // Apple weekday: 1=Sunday, 2=Monday, ... 7=Saturday
         switch weekday {
         case 2: return "Mindful Mondays"
         case 3: return "Thoughtful Tuesdays"
@@ -81,12 +80,44 @@ struct HomePageView: View {
                         }
 
                         if isExpanded {
-                            Text(entry)
-                                .font(.body)
-                                .padding()
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .background(Color.blue.opacity(0.1))
-                                .cornerRadius(8)
+                            VStack(alignment: .leading, spacing: 10) {
+                                // Use Markdown to make URLs tappable
+                                if let md = try? AttributedString(markdown: entry) {
+                                    Text(md)
+                                        .font(.body)
+                                        .textSelection(.enabled)
+                                        .padding()
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .background(Color.blue.opacity(0.1))
+                                        .cornerRadius(8)
+                                } else {
+                                    Text(entry)
+                                        .font(.body)
+                                        .padding()
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .background(Color.blue.opacity(0.1))
+                                        .cornerRadius(8)
+                                }
+
+                                // Detect and embed YouTube video (if present)
+                                if let youtubeURL = extractYouTubeURL(from: entry) {
+                                    YouTubeWebView(url: youtubeURL)
+                                        .frame(height: 220)
+                                        .cornerRadius(10)
+                                        .shadow(radius: 3)
+                                }
+
+                                // Detect and show all other links
+                                ForEach(extractAllLinks(from: entry)
+                                            .filter { !$0.absoluteString.contains("youtube") },
+                                        id: \.self) { url in
+                                    Link(destination: url) {
+                                        Label(url.absoluteString, systemImage: "link")
+                                    }
+                                    .font(.subheadline)
+                                    .foregroundColor(.blue)
+                                }
+                            }
                         } else {
                             Button { isExpanded = true } label: {
                                 Text(entry)
@@ -115,14 +146,12 @@ struct HomePageView: View {
                         .padding(.horizontal)
                 }
 
-                // Loading
                 if isLoading {
                     ProgressView("Loading...").padding()
                 }
 
                 Divider().padding(.horizontal)
 
-                // Date picker (no future dates)
                 DatePicker(
                     "Select Date",
                     selection: $selectedDate,
@@ -131,19 +160,16 @@ struct HomePageView: View {
                 )
                 .datePickerStyle(GraphicalDatePickerStyle())
                 .onChange(of: selectedDate) { newDate in
-                    // Clamp just in case
                     let clamped = min(Calendar.current.startOfDay(for: newDate), today)
                     if clamped != newDate { selectedDate = clamped }
                     fetchEntries(for: formattedRequestDate(clamped))
                 }
                 .onAppear {
-                    // Snap to today if needed, then fetch
                     if selectedDate > today { selectedDate = today }
                     fetchEntries(for: formattedRequestDate(selectedDate))
                 }
             }
         }
-        // UPDATED: navigation title now shows the theme of the day
         .navigationTitle(dayTheme(for: selectedDate))
         .navigationBarTitleDisplayMode(.inline)
     }
@@ -209,14 +235,59 @@ struct HomePageView: View {
             }
         }.resume()
     }
+
+    // MARK: - Link + YouTube Detection
+
+    private func extractYouTubeURL(from text: String) -> URL? {
+        let pattern = #"https?://(?:www\.)?(?:youtube\.com/watch\?v=|youtu\.be/)[^\s]+"#
+        if let range = text.range(of: pattern, options: .regularExpression) {
+            return URL(string: String(text[range]))
+        }
+        return nil
+    }
+
+    private func extractAllLinks(from text: String) -> [URL] {
+        guard let detector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue) else {
+            return []
+        }
+        let matches = detector.matches(in: text, range: NSRange(text.startIndex..., in: text))
+        return matches.compactMap { match in
+            guard let range = Range(match.range, in: text) else { return nil }
+            return URL(string: String(text[range]))
+        }
+    }
 }
 
-// Preview
-#Preview {
-    NavigationStack {
-        HomePageView()
-            // Title updates dynamically with today's weekday in the preview
-            .navigationTitle(" ")
+// MARK: - Embedded YouTube WebView
+
+struct YouTubeWebView: UIViewRepresentable {
+    let url: URL
+
+    func makeUIView(context: Context) -> WKWebView {
+        let web = WKWebView()
+        web.scrollView.isScrollEnabled = false
+        web.isOpaque = false
+        web.backgroundColor = .clear
+        return web
     }
+
+    func updateUIView(_ webView: WKWebView, context: Context) {
+        let html = """
+        <!doctype html><html><head><meta name='viewport' content='initial-scale=1, width=device-width'>
+        <style>body,html{margin:0;padding:0;background:transparent}</style></head>
+        <body>
+        <iframe width='100%' height='100%' src='\(url.absoluteString)?playsinline=1'
+            frameborder='0'
+            allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture'
+            allowfullscreen>
+        </iframe>
+        </body></html>
+        """
+        webView.loadHTMLString(html, baseURL: nil)
+    }
+}
+
+#Preview {
+    NavigationStack { HomePageView() }
 }
 
