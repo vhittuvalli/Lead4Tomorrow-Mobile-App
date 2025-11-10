@@ -12,8 +12,8 @@ log = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
 # Gmail credentials (app password only)
-username = os.environ.get("GMAIL_USER")
-password = os.environ.get("GMAIL_PASS")
+username = os.environ.get("GMAIL_USER1")
+password = os.environ.get("GMAIL_PASS1")
  
 # Carrier gateways for SMS
 CARRIERS = {
