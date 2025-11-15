@@ -79,7 +79,7 @@ def send_text(user_key, subject, body):
     For now we treat profile['phone'] as the Pushover user key.
     Later you can rename it to 'pushover_user_key' in your backend.
     """
-    pushover_token = os.environ.get("PUSHOVER_API_TOKEN")
+    pushover_token = os.environ.get("PUSHOVER_API_KEY")
     if not pushover_token:
         log.error("PUSHOVER_API_TOKEN environment variable is not set; cannot send Pushover notification.")
         return
