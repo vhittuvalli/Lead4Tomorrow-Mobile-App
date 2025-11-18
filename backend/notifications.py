@@ -6,13 +6,24 @@ import logging
 import requests
 import os
 
-# Initialize calendar and logging
+# ----------------------------
+# Setup
+# ----------------------------
+
 calendar = L4T_Calendar()
-log = logging.getLogger(__name__)
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s"
 )
+log = logging.getLogger(__name__)
+
+log.info("=== L4T NOTIFICATION SCRIPT VERSION 2.1 (SAFE TZ + PUSHOVER DEBUG) ===")
+
+# TEMP: hard-coded Pushover credentials for DEBUG ONLY
+# TODO: rotate these and move into environment variables after testing
+PUSHOVER_APP_TOKEN = "a3r7qn9z2ogz9wsmm8n1zcatzsntnc"
+PUSHOVER_TEST_USER_KEY = "uez5osu9q7yoja32sf2cnu91fdpypw"
 
 # Gmail credentials (app password only)
 username = os.environ.get("GMAIL_USER1")
@@ -24,7 +35,10 @@ else:
     log.info(f"Gmail username loaded: {username}")
 
 
-# Fetch profiles from live backend
+# ----------------------------
+# Backend: get profiles
+# ----------------------------
+
 def get_profiles():
     try:
         log.debug("Fetching profiles from backend...")
@@ -41,7 +55,10 @@ def get_profiles():
         return {}
 
 
-# Send email
+# ----------------------------
+# Email sending
+# ----------------------------
+
 def send_email(to_email, subject, body):
     if not username or not password:
         log.error("Cannot send email: missing Gmail credentials.")
@@ -73,22 +90,33 @@ def send_email(to_email, subject, body):
         log.error(f"Unexpected error sending email to {to_email}: {type(e).__name__}: {e}")
 
 
-# Send "text" via Pushover
+# ----------------------------
+# Text (Pushover) sending
+# ----------------------------
+
 def send_text(user_key, subject, body):
     """
-    For now we treat profile['phone'] as the Pushover user key.
-    Later you can rename it to 'pushover_user_key' in your backend.
+    TEMP DEBUG VERSION — uses hard-coded Pushover keys.
+    Once confirmed working, swap back to environment variables.
     """
-    pushover_token = os.environ.get("PUSHOVER_API_KEY")
-    if not pushover_token:
-        log.error("PUSHOVER_API_TOKEN environment variable is not set; cannot send Pushover notification.")
-        return
+    pushover_token = PUSHOVER_APP_TOKEN
 
+    # If you want to ignore profile user_key for now and always send to you:
     if not user_key:
-        log.error("No Pushover user key provided for this profile; cannot send Pushover notification.")
-        return
+        log.warning("Profile has no user_key; using PUSHOVER_TEST_USER_KEY instead.")
+        user_key = PUSHOVER_TEST_USER_KEY
 
-    log.info(f"Sending Pushover notification to user_key={user_key} with title='{subject}'")
+    log.info(
+        f"[DEBUG] Pushover send -> TOKEN starts: {pushover_token[:6]}..., "
+        f"USER_KEY starts: {user_key[:6]}..., title='{subject}'"
+    )
+
+    if not pushover_token:
+        log.error("[DEBUG] Missing pushover_token — not sending.")
+        return
+    if not user_key:
+        log.error("[DEBUG] Missing user_key — not sending.")
+        return
 
     try:
         resp = requests.post(
@@ -101,23 +129,45 @@ def send_text(user_key, subject, body):
             },
             timeout=10
         )
+
         if resp.status_code == 200:
-            log.info("Pushover notification sent successfully.")
+            log.info("[DEBUG] Pushover notification SENT successfully.")
         else:
-            log.error(f"Pushover API error {resp.status_code}: {resp.text}")
+            log.error(f"[DEBUG] Pushover ERROR {resp.status_code}: {resp.text}")
+
     except Exception as e:
-        log.error(f"Error sending Pushover notification: {type(e).__name__}: {e}")
+        log.error(f"[DEBUG] Exception during Pushover send: {type(e).__name__}: {e}")
 
 
-print("Starting notification loop...")
-sent_days = {email: None for email in get_profiles().keys()}
+# ----------------------------
+# Main loop setup
+# ----------------------------
+
+profiles_initial = get_profiles()
+sent_days = {email: None for email in profiles_initial.keys()}
 log.info(f"Initialized sent_days for {len(sent_days)} emails")
+
+
+# ----------------------------
+# Main notification loop
+# ----------------------------
 
 while True:
     profiles = get_profiles()
+
     for email, profile in profiles.items():
         try:
-            offset = int(profile.get("timezone", "0"))
+            # --- SAFE TIMEZONE HANDLING (no more int(None)) ---
+            tz_raw = profile.get("timezone")
+            if tz_raw in (None, ""):
+                offset = 0
+            else:
+                try:
+                    offset = int(tz_raw)
+                except ValueError:
+                    log.warning(f"Invalid timezone '{tz_raw}' for {email}, defaulting to 0")
+                    offset = 0
+
             current_time = calendar.get_curr_time(offset).strftime("%H:%M")
             today_short = calendar.get_today(offset)
             today_long = calendar.get_today(offset, True)
@@ -146,17 +196,17 @@ Have a wonderful day,
 Lead4Tomorrow
 """
 
-                method = profile.get("method")
+                method = (profile.get("method") or "").lower()
                 log.info(f"Triggering notification for {email} via {method}")
 
                 if method == "email":
                     send_email(email, subject, message)
-                elif method == "text":
-                    # Using 'phone' as pushover user key; change to 'pushover_user_key' later if you rename
+                elif method in ("text", "sms"):
+                    # Using 'phone' as pushover user key for now; can switch to 'pushover_user_key' later
                     user_key = profile.get("phone") or profile.get("pushover_user_key")
                     send_text(user_key, subject, message)
                 else:
-                    log.error(f"Unknown notification method '{method}' for {email}")
+                    log.error(f"Unknown notification method '{profile.get('method')}' for {email}")
 
                 sent_days[email] = today_short
                 log.info(f"Marked {email} as sent for {today_short}")
