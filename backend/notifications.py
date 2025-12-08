@@ -6,6 +6,10 @@ import logging
 import requests
 import os
 
+from apns2.client import APNsClient
+from apns2.payload import Payload
+from apns2.credentials import TokenCredentials
+
 # ----------------------------
 # Setup
 # ----------------------------
@@ -18,12 +22,7 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 
-log.info("=== L4T NOTIFICATION SCRIPT VERSION 2.1 (SAFE TZ + PUSHOVER DEBUG) ===")
-
-# TEMP: hard-coded Pushover credentials for DEBUG ONLY
-# TODO: rotate these and move into environment variables after testing
-PUSHOVER_APP_TOKEN = "a3r7qn9z2ogz9wsmm8n1zcatzsntnc"
-PUSHOVER_TEST_USER_KEY = "uez5osu9q7yoja32sf2cnu91fdpypw"
+log.info("=== L4T NOTIFICATION SCRIPT VERSION 3.0 (EMAIL + APNS PUSH) ===")
 
 # Gmail credentials (app password only)
 username = os.environ.get("GMAIL_USER1")
@@ -33,6 +32,57 @@ if not username or not password:
     log.error("GMAIL_USER1 or GMAIL_PASS1 environment variables are not set! Email notifications will not work.")
 else:
     log.info(f"Gmail username loaded: {username}")
+
+# APNs (Apple Push Notification) credentials from environment
+APNS_AUTH_KEY_PATH = os.environ.get("APNS_AUTH_KEY_PATH")  # e.g. /etc/secrets/AuthKey_XXXXXXX.p8
+APNS_TEAM_ID = os.environ.get("APNS_TEAM_ID")              # Your Apple Developer Team ID
+APNS_KEY_ID = os.environ.get("APNS_KEY")                   # The Key ID you created for APNs
+APNS_BUNDLE_ID = os.environ.get("APNS_BUNDLE_ID")          # e.g. com.varunhittuvalli.Lead4Tomorrow-Calendar-App
+
+apns_client = None  # lazy init
+
+
+def init_apns_client():
+    """
+    Lazily initialize the global APNs client using token-based auth.
+    """
+    global apns_client
+
+    if apns_client is not None:
+        return apns_client
+
+    missing = []
+    if not APNS_AUTH_KEY_PATH:
+        missing.append("APNS_AUTH_KEY_PATH")
+    if not APNS_TEAM_ID:
+        missing.append("APNS_TEAM_ID")
+    if not APNS_KEY_ID:
+        missing.append("APNS_KEY (Key ID)")
+    if not APNS_BUNDLE_ID:
+        missing.append("APNS_BUNDLE_ID")
+
+    if missing:
+        log.error(f"Cannot initialize APNs client. Missing env vars: {', '.join(missing)}")
+        return None
+
+    try:
+        credentials = TokenCredentials(
+            auth_key_path=APNS_AUTH_KEY_PATH,
+            team_id=APNS_TEAM_ID,
+            key_id=APNS_KEY_ID,
+        )
+        # use_sandbox=False for production
+        apns_client = APNsClient(
+            credentials=credentials,
+            use_sandbox=False,
+            use_alternative_port=False,
+        )
+        log.info("APNs client initialized successfully.")
+    except Exception as e:
+        log.error(f"Failed to initialize APNs client: {type(e).__name__}: {e}")
+        apns_client = None
+
+    return apns_client
 
 
 # ----------------------------
@@ -91,52 +141,43 @@ def send_email(to_email, subject, body):
 
 
 # ----------------------------
-# Text (Pushover) sending
+# Push notification sending (APNs)
 # ----------------------------
 
-def send_text(user_key, subject, body):
+def send_push(device_token, title, body):
     """
-    TEMP DEBUG VERSION — uses hard-coded Pushover keys.
-    Once confirmed working, swap back to environment variables.
+    Send an APNs push notification to a single device token.
+
+    device_token: hex string device token from iOS app
+    title: notification title
+    body: notification body
     """
-    pushover_token = PUSHOVER_APP_TOKEN
-
-    # If you want to ignore profile user_key for now and always send to you:
-    if not user_key:
-        log.warning("Profile has no user_key; using PUSHOVER_TEST_USER_KEY instead.")
-        user_key = PUSHOVER_TEST_USER_KEY
-
-    log.info(
-        f"[DEBUG] Pushover send -> TOKEN starts: {pushover_token[:6]}..., "
-        f"USER_KEY starts: {user_key[:6]}..., title='{subject}'"
-    )
-
-    if not pushover_token:
-        log.error("[DEBUG] Missing pushover_token — not sending.")
+    if not device_token:
+        log.error("No device_token provided for push notification.")
         return
-    if not user_key:
-        log.error("[DEBUG] Missing user_key — not sending.")
+
+    client = init_apns_client()
+    if client is None:
+        log.error("APNs client not initialized; cannot send push.")
         return
 
     try:
-        resp = requests.post(
-            "https://api.pushover.net/1/messages.json",
-            data={
-                "token": pushover_token,
-                "user": user_key,
-                "title": subject,
-                "message": body,
-            },
-            timeout=10
+        payload = Payload(
+            alert={"title": title, "body": body},
+            sound="default",
+            badge=1
         )
 
-        if resp.status_code == 200:
-            log.info("[DEBUG] Pushover notification SENT successfully.")
-        else:
-            log.error(f"[DEBUG] Pushover ERROR {resp.status_code}: {resp.text}")
-
+        log.info(f"Sending APNs push to token starting with {device_token[:10]}...")
+        client.send_notification(
+            token=device_token,
+            notification=payload,
+            topic=APNS_BUNDLE_ID,
+            push_type="alert"
+        )
+        log.info("APNs push sent successfully.")
     except Exception as e:
-        log.error(f"[DEBUG] Exception during Pushover send: {type(e).__name__}: {e}")
+        log.error(f"Error sending APNs push: {type(e).__name__}: {e}")
 
 
 # ----------------------------
@@ -201,10 +242,13 @@ Lead4Tomorrow
 
                 if method == "email":
                     send_email(email, subject, message)
-                elif method in ("text", "sms"):
-                    # Using 'phone' as pushover user key for now; can switch to 'pushover_user_key' later
-                    user_key = profile.get("phone") or profile.get("pushover_user_key")
-                    send_text(user_key, subject, message)
+                elif method in ("push", "text", "sms"):
+                    # Expecting profile["device_token"] to contain the APNs device token
+                    device_token = profile.get("device_token")
+                    if not device_token:
+                        log.error(f"No device_token for profile {email}, cannot send push.")
+                    else:
+                        send_push(device_token, subject, entry["entry"])
                 else:
                     log.error(f"Unknown notification method '{profile.get('method')}' for {email}")
 

@@ -6,9 +6,7 @@ struct SettingsPageView: View {
     @Binding var isLoggedIn: Bool
     @Binding var loggedInEmail: String
 
-    @State private var phoneNumber = ""
-    @State private var carrier = "att"
-    @State private var preferredMethod = "Email"  // "Email" | "Text"
+    @State private var preferredMethod = "Email"  // "Email" | "Push"
     @State private var selectedTimezone = "America/New_York"
     @State private var notificationTime = Date()
     @State private var isNotificationsEnabled = false
@@ -19,7 +17,6 @@ struct SettingsPageView: View {
     @State private var showDeleteConfirm = false
     @State private var isDeleting = false
 
-    private let carriers = ["att", "tmobile", "verizon", "sprint"]
     private let americanTimezones = [
         ("America/New_York", "Eastern Time (ET)"),
         ("America/Chicago", "Central Time (CT)"),
@@ -87,16 +84,17 @@ struct SettingsPageView: View {
                     .tint(AppTheme.accent)
                     .onChange(of: isNotificationsEnabled) { enabled in
                         if !enabled {
+                            // Clear local pending notifications and reset UI
                             UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
                             resetFields()
                         }
                     }
 
                 if isNotificationsEnabled {
-                    // Email vs Text
+                    // Email vs Push
                     Picker("Delivery Method", selection: $preferredMethod) {
                         Text("Email").tag("Email")
-                        Text("Text").tag("Text")
+                        Text("Push").tag("Push")
                     }
                     .font(AppTheme.body(16))
                     .pickerStyle(.segmented)
@@ -106,9 +104,6 @@ struct SettingsPageView: View {
                         // Collapsed summary
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Method: \(preferredMethod)")
-                            if preferredMethod == "Text" {
-                                Text("Phone: \(phoneNumber) (\(carrier.capitalized))")
-                            }
                             Text("Timezone: \(selectedTimezone)")
                             Text("Notification Time: \(formattedTime(notificationTime))")
                         }
@@ -119,19 +114,6 @@ struct SettingsPageView: View {
                         .cornerRadius(10)
                     } else {
                         // Editable fields
-                        if preferredMethod == "Text" {
-                            TextField("Enter Phone Number", text: $phoneNumber)
-                                .keyboardType(.phonePad)
-                                .font(AppTheme.body(16))
-                        }
-
-                        Picker("Carrier", selection: $carrier) {
-                            ForEach(carriers, id: \.self) { c in
-                                Text(c.capitalized).tag(c)
-                            }
-                        }
-                        .font(AppTheme.body(16))
-
                         Picker("Select Timezone", selection: $selectedTimezone) {
                             ForEach(americanTimezones, id: \.0) { tz in
                                 Text(tz.1).tag(tz.0)
@@ -222,7 +204,6 @@ struct SettingsPageView: View {
                     loggedInEmail = ""
                 }
             } catch {
-                // Optional: surface an error UI if you want.
                 print("Delete error: \(error)")
             }
         }
@@ -237,12 +218,11 @@ struct SettingsPageView: View {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
+        // Only method, time, timezone now
         let body: [String: Any] = [
             "email": loggedInEmail,
             "time": formattedTime(notificationTime),
             "timezone": "\(utcOffset(for: selectedTimezone))",
-            "phone": phoneNumber,
-            "carrier": carrier,
             "method": preferredMethod.lowercased()
         ]
 
@@ -251,6 +231,7 @@ struct SettingsPageView: View {
         URLSession.shared.dataTask(with: request) { _, _, error in
             DispatchQueue.main.async {
                 if error == nil {
+                    // profile saved successfully on backend
                     isProfileCollapsed = true
                     showSaveConfirmation = true
                     DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
@@ -275,8 +256,6 @@ struct SettingsPageView: View {
             }
 
             DispatchQueue.main.async {
-                self.phoneNumber = profile["phone"] as? String ?? ""
-                self.carrier = profile["carrier"] as? String ?? "att"
                 self.preferredMethod = (profile["method"] as? String)?.capitalized ?? "Email"
 
                 if let tzStr = profile["timezone"] as? String, let offset = Int(tzStr) {
@@ -294,8 +273,6 @@ struct SettingsPageView: View {
     // MARK: - Helpers
 
     private func resetFields() {
-        phoneNumber = ""
-        carrier = "att"
         preferredMethod = "Email"
         selectedTimezone = "America/New_York"
         notificationTime = Date()
