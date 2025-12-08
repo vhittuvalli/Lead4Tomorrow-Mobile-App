@@ -74,7 +74,7 @@ if APNS_KEY_PATH and APNS_KEY_ID and APNS_TEAM_ID:
     try:
         creds = TokenCredentials(
             auth_key_path=APNS_KEY_PATH,
-            key_id=APNS_KEY_ID,
+            auth_key_id=APNS_KEY_ID,
             team_id=APNS_TEAM_ID
         )
 
