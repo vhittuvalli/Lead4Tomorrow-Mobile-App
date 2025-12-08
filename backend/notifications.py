@@ -18,6 +18,10 @@ if not hasattr(collections, "Mapping"):
     collections.Mapping = collections.abc.Mapping
 if not hasattr(collections, "MutableMapping"):
     collections.MutableMapping = collections.abc.MutableMapping
+if not hasattr(collections, "MutableSet"):
+    collections.MutableSet = collections.abc.MutableSet
+if not hasattr(collections, "Callable"):
+    collections.Callable = collections.abc.Callable
 
 # APNS imports
 from apns2.client import APNsClient
@@ -60,10 +64,10 @@ else:
 # APNs setup (Token-based)
 # ----------------------------
 
-APNS_KEY_PATH = os.environ.get("APNS_KEY_PATH")   # path to .p8 file
-APNS_KEY_ID = os.environ.get("APNS_KEY")          # you renamed this
+APNS_KEY_PATH = os.environ.get("APNS_KEY")   # path to .p8 file
+APNS_KEY_ID = os.environ.get("APNS_KEY_ID")          # your key ID env var
 APNS_TEAM_ID = os.environ.get("APNS_TEAM_ID")
-APNS_TOPIC = os.environ.get("APNS_TOPIC", "com.varunhittuvalli.Lead4Tomorrow-Calendar-App")
+APNS_TOPIC = os.environ.get("APNS_BUNDLE_ID")
 
 apns_client = None
 if APNS_KEY_PATH and APNS_KEY_ID and APNS_TEAM_ID:
@@ -229,4 +233,3 @@ Lead4Tomorrow
             log.error(f"Error in notification loop for {email}: {type(e).__name__}: {e}")
 
     time.sleep(60)
-
