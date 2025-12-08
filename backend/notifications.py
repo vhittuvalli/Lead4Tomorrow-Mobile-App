@@ -9,6 +9,7 @@ import os
 from apns2.client import APNsClient
 from apns2.payload import Payload
 from apns2.credentials import TokenCredentials
+from apns2.errors import Exception as APNsException
 
 # ----------------------------
 # Setup
@@ -22,7 +23,7 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 
-log.info("=== L4T NOTIFICATION SCRIPT VERSION 3.0 (EMAIL + APNS PUSH) ===")
+log.info("=== L4T NOTIFICATION SCRIPT (EMAIL + APNS PUSH) ===")
 
 # Gmail credentials (app password only)
 username = os.environ.get("GMAIL_USER1")
@@ -33,56 +34,30 @@ if not username or not password:
 else:
     log.info(f"Gmail username loaded: {username}")
 
-# APNs (Apple Push Notification) credentials from environment
-APNS_AUTH_KEY_PATH = os.environ.get("APNS_AUTH_KEY_PATH")  # e.g. /etc/secrets/AuthKey_XXXXXXX.p8
-APNS_TEAM_ID = os.environ.get("APNS_TEAM_ID")              # Your Apple Developer Team ID
-APNS_KEY_ID = os.environ.get("APNS_KEY")                   # The Key ID you created for APNs
-APNS_BUNDLE_ID = os.environ.get("APNS_BUNDLE_ID")          # e.g. com.varunhittuvalli.Lead4Tomorrow-Calendar-App
+# ----------------------------
+# APNs setup (Token-based)
+# ----------------------------
 
-apns_client = None  # lazy init
+APNS_KEY_PATH = os.environ.get("APNS_KEY_PATH")   # path to .p8 file
+APNS_KEY_ID = os.environ.get("APNS_KEY")          # you said you used APNS_KEY instead of APNS_KEY_ID
+APNS_TEAM_ID = os.environ.get("APNS_TEAM_ID")
+APNS_TOPIC = os.environ.get("APNS_TOPIC", "com.varunhittuvalli.Lead4Tomorrow-Calendar-App")
 
-
-def init_apns_client():
-    """
-    Lazily initialize the global APNs client using token-based auth.
-    """
-    global apns_client
-
-    if apns_client is not None:
-        return apns_client
-
-    missing = []
-    if not APNS_AUTH_KEY_PATH:
-        missing.append("APNS_AUTH_KEY_PATH")
-    if not APNS_TEAM_ID:
-        missing.append("APNS_TEAM_ID")
-    if not APNS_KEY_ID:
-        missing.append("APNS_KEY (Key ID)")
-    if not APNS_BUNDLE_ID:
-        missing.append("APNS_BUNDLE_ID")
-
-    if missing:
-        log.error(f"Cannot initialize APNs client. Missing env vars: {', '.join(missing)}")
-        return None
-
+apns_client = None
+if APNS_KEY_PATH and APNS_KEY_ID and APNS_TEAM_ID:
     try:
-        credentials = TokenCredentials(
-            auth_key_path=APNS_AUTH_KEY_PATH,
-            team_id=APNS_TEAM_ID,
+        creds = TokenCredentials(
+            auth_key_path=APNS_KEY_PATH,
             key_id=APNS_KEY_ID,
+            team_id=APNS_TEAM_ID
         )
-        # use_sandbox=False for production
-        apns_client = APNsClient(
-            credentials=credentials,
-            use_sandbox=False,
-            use_alternative_port=False,
-        )
+        # use_sandbox=False for production; True if you're still on Apple dev sandbox
+        apns_client = APNsClient(credentials=creds, use_sandbox=False)
         log.info("APNs client initialized successfully.")
     except Exception as e:
-        log.error(f"Failed to initialize APNs client: {type(e).__name__}: {e}")
-        apns_client = None
-
-    return apns_client
+        log.error(f"Error initializing APNs client: {type(e).__name__}: {e}")
+else:
+    log.error("Missing one or more APNS_* environment variables; push notifications will not work.")
 
 
 # ----------------------------
@@ -141,43 +116,29 @@ def send_email(to_email, subject, body):
 
 
 # ----------------------------
-# Push notification sending (APNs)
+# Push (APNs) sending
 # ----------------------------
 
-def send_push(device_token, title, body):
-    """
-    Send an APNs push notification to a single device token.
-
-    device_token: hex string device token from iOS app
-    title: notification title
-    body: notification body
-    """
-    if not device_token:
-        log.error("No device_token provided for push notification.")
-        return
-
-    client = init_apns_client()
-    if client is None:
+def send_push(device_token, subject, body):
+    if not apns_client:
         log.error("APNs client not initialized; cannot send push.")
         return
 
-    try:
-        payload = Payload(
-            alert={"title": title, "body": body},
-            sound="default",
-            badge=1
-        )
+    if not device_token:
+        log.error("No device_token provided; cannot send push.")
+        return
 
-        log.info(f"Sending APNs push to token starting with {device_token[:10]}...")
-        client.send_notification(
-            token=device_token,
-            notification=payload,
-            topic=APNS_BUNDLE_ID,
-            push_type="alert"
-        )
-        log.info("APNs push sent successfully.")
+    log.info(f"Sending APNs push to token starting {device_token[:10]}..., title='{subject}'")
+    try:
+        payload = Payload(alert={"title": subject, "body": body}, sound="default")
+
+        # send_notification(token, payload, topic)
+        apns_client.send_notification(device_token, payload, topic=APNS_TOPIC)
+        log.info("APNs push notification SENT successfully.")
+    except APNsException as e:
+        log.error(f"APNs library exception: {type(e).__name__}: {e}")
     except Exception as e:
-        log.error(f"Error sending APNs push: {type(e).__name__}: {e}")
+        log.error(f"Unexpected error during APNs send: {type(e).__name__}: {e}")
 
 
 # ----------------------------
@@ -198,14 +159,14 @@ while True:
 
     for email, profile in profiles.items():
         try:
-            # --- SAFE TIMEZONE HANDLING (no more int(None)) ---
+            # --- SAFE TIMEZONE HANDLING ---
             tz_raw = profile.get("timezone")
             if tz_raw in (None, ""):
                 offset = 0
             else:
                 try:
                     offset = int(tz_raw)
-                except ValueError:
+                except (ValueError, TypeError):
                     log.warning(f"Invalid timezone '{tz_raw}' for {email}, defaulting to 0")
                     offset = 0
 
@@ -242,13 +203,12 @@ Lead4Tomorrow
 
                 if method == "email":
                     send_email(email, subject, message)
-                elif method in ("push", "text", "sms"):
-                    # Expecting profile["device_token"] to contain the APNs device token
+                elif method == "push":
                     device_token = profile.get("device_token")
                     if not device_token:
                         log.error(f"No device_token for profile {email}, cannot send push.")
                     else:
-                        send_push(device_token, subject, entry["entry"])
+                        send_push(device_token, subject, message)
                 else:
                     log.error(f"Unknown notification method '{profile.get('method')}' for {email}")
 

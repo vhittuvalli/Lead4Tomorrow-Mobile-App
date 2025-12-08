@@ -8,13 +8,12 @@ import psycopg
 app = Flask(__name__)
 CORS(app)
 
-# -----------------------------------
-# PostgreSQL connection
-# -----------------------------------
+# PostgreSQL credentials from Render
 DB_HOST = "dpg-d1s18nje5dus73fm1qeg-a"
 DB_NAME = "lead4tomorrow"
 DB_USER = "lead4tomorrow_user"
 DB_PASSWORD = os.getenv("DB_PASSWORD")
+
 
 def get_connection():
     return psycopg.connect(
@@ -25,19 +24,15 @@ def get_connection():
         autocommit=True
     )
 
-# -----------------------------------
-# Load calendar entries from JSON
-# -----------------------------------
+
+# ----------------------------
+# Calendar entries from JSON
+# ----------------------------
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ENTRIES_PATH = os.path.join(BASE_DIR, "storage", "entries.json")
-
 with open(ENTRIES_PATH, "r") as f:
     calendar_entries = json.load(f)
 
-
-# -----------------------------------
-# Routes
-# -----------------------------------
 
 @app.route("/", methods=["GET"])
 def home():
@@ -63,7 +58,9 @@ def get_entry():
         return jsonify({"error": str(e)}), 500
 
 
-# ---------- Auth / Profiles ----------
+# ----------------------------
+# Auth / Profiles
+# ----------------------------
 
 @app.route("/create_profile", methods=["POST"])
 def create_profile():
@@ -78,14 +75,12 @@ def create_profile():
 
     with get_connection() as conn:
         cur = conn.cursor()
-        cur.execute(
-            """
+        # Only set email + password here; other fields can be updated later
+        cur.execute("""
             INSERT INTO profiles (email, password)
             VALUES (%s, %s)
             ON CONFLICT (email) DO NOTHING
-            """,
-            (email, hashed.decode("utf-8")),
-        )
+        """, (email, hashed.decode("utf-8")))
         cur.close()
 
     return jsonify({"message": "Account created"}), 200
@@ -108,58 +103,44 @@ def login():
 
     if result and bcrypt.checkpw(password.encode("utf-8"), result[0].encode("utf-8")):
         return jsonify({"message": "Login successful"}), 200
-
     return jsonify({"error": "Invalid credentials"}), 401
 
 
 @app.route("/update_profile", methods=["POST"])
 def update_profile():
     """
-    Upsert profile notification settings.
-
-    Expected from the iOS app now:
-      {
-        "email": "...",
-        "time": "HH:MM",
-        "timezone": "<offset hours as string>",
-        "method": "email" or "push"
-      }
-
-    "phone" and "carrier" are optional and will default to None if not provided.
+    Upserts notification preferences and (optionally) device_token for a profile.
+    Expected JSON:
+    {
+      "email": "...",
+      "method": "email" | "push",
+      "timezone": "-5",        # string hours offset
+      "time": "09:00",         # HH:MM
+      "device_token": "..."    # optional
+    }
     """
     data = request.json or {}
-
     email = data.get("email")
-    if not email:
-        return jsonify({"error": "email required"}), 400
-
-    # Optional: for backward compatibility; new app likely doesn't send these.
-    phone = data.get("phone")
-    carrier = data.get("carrier")
-
     method = data.get("method")
     timezone = data.get("timezone")
     time_val = data.get("time")
+    device_token = data.get("device_token")
 
-    if method is None or timezone is None or time_val is None:
-        return jsonify({"error": "method, timezone, and time are required"}), 400
+    if not email:
+        return jsonify({"error": "email required"}), 400
 
     with get_connection() as conn:
         cur = conn.cursor()
-        cur.execute(
-            """
-            INSERT INTO profiles (email, phone, carrier, method, timezone, time)
-            VALUES (%s, %s, %s, %s, %s, %s)
+        cur.execute("""
+            INSERT INTO profiles (email, method, timezone, time, device_token)
+            VALUES (%s, %s, %s, %s, %s)
             ON CONFLICT (email)
             DO UPDATE SET
-                phone    = EXCLUDED.phone,
-                carrier  = EXCLUDED.carrier,
-                method   = EXCLUDED.method,
+                method = EXCLUDED.method,
                 timezone = EXCLUDED.timezone,
-                time     = EXCLUDED.time
-            """,
-            (email, phone, carrier, method, timezone, time_val),
-        )
+                time = EXCLUDED.time,
+                device_token = EXCLUDED.device_token
+        """, (email, method, timezone, time_val, device_token))
         cur.close()
 
     return jsonify({"status": "success"}), 200
@@ -173,27 +154,21 @@ def get_profile():
 
     with get_connection() as conn:
         cur = conn.cursor()
-        cur.execute(
-            """
-            SELECT phone, carrier, method, timezone, time
+        cur.execute("""
+            SELECT method, timezone, time, device_token
             FROM profiles
             WHERE email = %s
-            """,
-            (email,),
-        )
+        """, (email,))
         row = cur.fetchone()
         cur.close()
 
     if row:
-        return jsonify(
-            {
-                "phone": row[0],
-                "carrier": row[1],
-                "method": row[2],
-                "timezone": row[3],
-                "time": row[4],
-            }
-        ), 200
+        return jsonify({
+            "method": row[0],
+            "timezone": row[1],
+            "time": row[2],
+            "device_token": row[3],
+        }), 200
 
     return jsonify({}), 200
 
@@ -201,27 +176,15 @@ def get_profile():
 @app.route("/show_profiles", methods=["GET"])
 def show_profiles():
     """
-    Returns a dict keyed by email for the notification worker script.
-
-    {
-      "user@example.com": {
-         "phone": ...,
-         "carrier": ...,
-         "method": ...,
-         "timezone": ...,
-         "time": ...
-      },
-      ...
-    }
+    Returns all profiles as a dict keyed by email.
+    Includes device_token for push.
     """
     with get_connection() as conn:
         cur = conn.cursor()
-        cur.execute(
-            """
-            SELECT email, phone, carrier, method, timezone, time
+        cur.execute("""
+            SELECT email, phone, carrier, method, timezone, time, device_token
             FROM profiles
-            """
-        )
+        """)
         rows = cur.fetchall()
         cur.close()
 
@@ -231,9 +194,10 @@ def show_profiles():
             "carrier": carrier,
             "method": method,
             "timezone": timezone,
-            "time": time_val,
+            "time": time,
+            "device_token": device_token
         }
-        for (email, phone, carrier, method, timezone, time_val) in rows
+        for (email, phone, carrier, method, timezone, time, device_token) in rows
     }
 
     return jsonify(profiles), 200
@@ -243,20 +207,16 @@ def show_profiles():
 def delete_profile():
     """
     Deletes a profile by email.
-
     Accepts:
       - POST with JSON body: {"email": "<user@example.com>"}
       - DELETE with ?email=<...> query string
       - POST form-encoded: email=<...>
-
     Returns 200 whether deleted or not found (idempotent UX).
     """
     email = None
-
     if request.is_json:
         data = request.get_json(silent=True) or {}
         email = data.get("email")
-
     if not email:
         email = request.args.get("email") or request.form.get("email")
 
@@ -266,12 +226,9 @@ def delete_profile():
     try:
         with get_connection() as conn:
             cur = conn.cursor()
-            cur.execute(
-                "DELETE FROM profiles WHERE email = %s RETURNING email", (email,)
-            )
+            cur.execute("DELETE FROM profiles WHERE email = %s RETURNING email", (email,))
             deleted = cur.fetchone()
             cur.close()
-
         if deleted:
             return jsonify({"status": "deleted", "email": email}), 200
         else:
@@ -282,11 +239,10 @@ def delete_profile():
 
 @app.route("/routes", methods=["GET"])
 def routes():
-    """Helper route so you can verify the deploy has all endpoints."""
     return jsonify(sorted([str(r.rule) for r in app.url_map.iter_rules()])), 200
 
 
-# Uncomment this for local testing
+# Uncomment for local testing
 # if __name__ == "__main__":
 #     app.run(debug=True)
 

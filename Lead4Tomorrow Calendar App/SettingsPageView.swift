@@ -84,7 +84,6 @@ struct SettingsPageView: View {
                     .tint(AppTheme.accent)
                     .onChange(of: isNotificationsEnabled) { enabled in
                         if !enabled {
-                            // Clear local pending notifications and reset UI
                             UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
                             resetFields()
                         }
@@ -159,8 +158,8 @@ struct SettingsPageView: View {
                 }
             }
         }
-        .font(AppTheme.body(16)) // base font for the form
-        .tint(AppTheme.accent)   // default accent within this screen
+        .font(AppTheme.body(16))
+        .tint(AppTheme.accent)
         .scrollContentBackground(.hidden)
         .background(AppTheme.backgroundSoft.ignoresSafeArea())
         .onAppear(perform: loadProfile)
@@ -218,12 +217,14 @@ struct SettingsPageView: View {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
-        // Only method, time, timezone now
+        let deviceToken = UserDefaults.standard.string(forKey: "apnsDeviceToken") ?? ""
+
         let body: [String: Any] = [
             "email": loggedInEmail,
             "time": formattedTime(notificationTime),
             "timezone": "\(utcOffset(for: selectedTimezone))",
-            "method": preferredMethod.lowercased()
+            "method": preferredMethod.lowercased(),
+            "device_token": deviceToken
         ]
 
         request.httpBody = try? JSONSerialization.data(withJSONObject: body)
@@ -231,7 +232,6 @@ struct SettingsPageView: View {
         URLSession.shared.dataTask(with: request) { _, _, error in
             DispatchQueue.main.async {
                 if error == nil {
-                    // profile saved successfully on backend
                     isProfileCollapsed = true
                     showSaveConfirmation = true
                     DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
@@ -291,7 +291,6 @@ struct SettingsPageView: View {
         if let d = formatter.date(from: timeString) {
             return d
         }
-        // Fallback to 9am if the backend has empty/malformed time
         var comps = DateComponents()
         comps.hour = 9
         comps.minute = 0
