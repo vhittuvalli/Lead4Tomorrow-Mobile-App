@@ -4,3 +4,7 @@ gunicorn==21.2.0
 bcrypt==4.1.2
 requests==2.31.0
 psycopg[binary]==3.2.9
+
+# APNs push notification support
+apns2==0.7.2
+hyper==0.7.0
