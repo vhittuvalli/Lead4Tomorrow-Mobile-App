@@ -6,7 +6,20 @@ import logging
 import requests
 import os
 
-# APNS imports — ONLY VALID, SAFE ONES
+import collections
+import collections.abc
+
+# ------------------------------------------------------------------
+# Temporary compatibility patch for Python 3.13 + 'hyper' dependency
+# ------------------------------------------------------------------
+if not hasattr(collections, "Iterable"):
+    collections.Iterable = collections.abc.Iterable
+if not hasattr(collections, "Mapping"):
+    collections.Mapping = collections.abc.Mapping
+if not hasattr(collections, "MutableMapping"):
+    collections.MutableMapping = collections.abc.MutableMapping
+
+# APNS imports
 from apns2.client import APNsClient
 from apns2.credentials import TokenCredentials
 from apns2.payload import Payload
@@ -16,8 +29,9 @@ from apns2.errors import (
     PayloadTooLarge,
     TooManyRequests,
     ServiceUnavailable,
-    InternalServerError
+    InternalServerError,
 )
+
 
 # ----------------------------
 # Setup
