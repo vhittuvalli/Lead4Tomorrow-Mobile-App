@@ -23,6 +23,10 @@ if not hasattr(collections, "MutableSet"):
 if not hasattr(collections, "Callable"):
     collections.Callable = collections.abc.Callable
 
+import ssl
+if not hasattr(ssl, 'verify_hostname'):
+    ssl.verify_hostname = lambda cert, hostname: None
+
 # APNS imports
 from apns2.client import APNsClient
 from apns2.credentials import TokenCredentials
