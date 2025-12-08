@@ -5,11 +5,10 @@ from L4T_calendar import L4T_Calendar
 import logging
 import requests
 import os
-
 from apns2.client import APNsClient
 from apns2.payload import Payload
-from apns2.credentials import TokenCredentials
-from apns2.errors import APNsException
+from apns2.errors import BadDeviceToken, Unregistered, PayloadTooLarge, TooManyRequests, ServiceUnavailable, InternalServerError
+
 
 # ----------------------------
 # Setup
