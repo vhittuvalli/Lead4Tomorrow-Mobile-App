@@ -5,10 +5,19 @@ from L4T_calendar import L4T_Calendar
 import logging
 import requests
 import os
-from apns2.client import APNsClient
-from apns2.payload import Payload
-from apns2.errors import BadDeviceToken, Unregistered, PayloadTooLarge, TooManyRequests, ServiceUnavailable, InternalServerError
 
+# APNS imports — ONLY VALID, SAFE ONES
+from apns2.client import APNsClient
+from apns2.credentials import TokenCredentials
+from apns2.payload import Payload
+from apns2.errors import (
+    BadDeviceToken,
+    Unregistered,
+    PayloadTooLarge,
+    TooManyRequests,
+    ServiceUnavailable,
+    InternalServerError
+)
 
 # ----------------------------
 # Setup
@@ -38,7 +47,7 @@ else:
 # ----------------------------
 
 APNS_KEY_PATH = os.environ.get("APNS_KEY_PATH")   # path to .p8 file
-APNS_KEY_ID = os.environ.get("APNS_KEY")          # you said you used APNS_KEY instead of APNS_KEY_ID
+APNS_KEY_ID = os.environ.get("APNS_KEY")          # you renamed this
 APNS_TEAM_ID = os.environ.get("APNS_TEAM_ID")
 APNS_TOPIC = os.environ.get("APNS_TOPIC", "com.varunhittuvalli.Lead4Tomorrow-Calendar-App")
 
@@ -50,14 +59,18 @@ if APNS_KEY_PATH and APNS_KEY_ID and APNS_TEAM_ID:
             key_id=APNS_KEY_ID,
             team_id=APNS_TEAM_ID
         )
-        # use_sandbox=False for production; True if you're still on Apple dev sandbox
-        apns_client = APNsClient(credentials=creds, use_sandbox=False)
+
+        apns_client = APNsClient(
+            credentials=creds,
+            use_sandbox=False,   # set True only if you are using iOS dev builds
+            use_alternative_port=False
+        )
+
         log.info("APNs client initialized successfully.")
     except Exception as e:
         log.error(f"Error initializing APNs client: {type(e).__name__}: {e}")
 else:
     log.error("Missing one or more APNS_* environment variables; push notifications will not work.")
-
 
 # ----------------------------
 # Backend: get profiles
@@ -65,7 +78,6 @@ else:
 
 def get_profiles():
     try:
-        log.debug("Fetching profiles from backend...")
         response = requests.get(
             "https://lead4tomorrow-mobile-app.onrender.com/show_profiles",
             timeout=10
@@ -78,7 +90,6 @@ def get_profiles():
         log.error(f"Error fetching profiles: {type(e).__name__}: {e}")
         return {}
 
-
 # ----------------------------
 # Email sending
 # ----------------------------
@@ -88,31 +99,24 @@ def send_email(to_email, subject, body):
         log.error("Cannot send email: missing Gmail credentials.")
         return
 
-    log.info(f"Attempting to send email to {to_email} with subject '{subject}'")
     try:
         with smtplib.SMTP("smtp.gmail.com", 587, timeout=60) as smtp:
-            smtp.ehlo()
             smtp.starttls()
-            smtp.ehlo()
             smtp.login(username, password)
 
             msg = (
                 f"From: {username}\r\n"
                 f"To: {to_email}\r\n"
-                f"Subject: {subject}\r\n"
-                f"\r\n"
+                f"Subject: {subject}\r\n\r\n"
                 f"{body}"
             )
 
             smtp.sendmail(username, [to_email], msg)
-        log.info(f"Email successfully sent to {to_email}")
-    except smtplib.SMTPAuthenticationError as e:
-        log.error(f"SMTP authentication failed: {e}")
-    except smtplib.SMTPException as e:
-        log.error(f"SMTP error while sending email to {to_email}: {type(e).__name__}: {e}")
-    except Exception as e:
-        log.error(f"Unexpected error sending email to {to_email}: {type(e).__name__}: {e}")
 
+        log.info(f"Email sent to {to_email}")
+
+    except Exception as e:
+        log.error(f"Email error for {to_email}: {type(e).__name__}: {e}")
 
 # ----------------------------
 # Push (APNs) sending
@@ -127,66 +131,64 @@ def send_push(device_token, subject, body):
         log.error("No device_token provided; cannot send push.")
         return
 
-    log.info(f"Sending APNs push to token starting {device_token[:10]}..., title='{subject}'")
     try:
         payload = Payload(alert={"title": subject, "body": body}, sound="default")
 
-        # send_notification(token, payload, topic)
-        apns_client.send_notification(device_token, payload, topic=APNS_TOPIC)
-        log.info("APNs push notification SENT successfully.")
-    except APNsException as e:
-        log.error(f"APNs library exception: {type(e).__name__}: {e}")
-    except Exception as e:
-        log.error(f"Unexpected error during APNs send: {type(e).__name__}: {e}")
+        apns_client.send_notification(
+            device_token,
+            payload,
+            topic=APNS_TOPIC
+        )
 
+        log.info(f"APNs push sent to {device_token[:8]}...")
+
+    except BadDeviceToken:
+        log.error(f"BadDeviceToken for token {device_token}")
+    except Unregistered:
+        log.error(f"Unregistered device {device_token}")
+    except PayloadTooLarge:
+        log.error("PayloadTooLarge error")
+    except TooManyRequests:
+        log.error("TooManyRequests (APNs rate limited)")
+    except ServiceUnavailable:
+        log.error("ServiceUnavailable (APNs down)")
+    except InternalServerError:
+        log.error("InternalServerError from APNs")
+    except Exception as e:
+        log.error(f"Unexpected APNs error: {type(e).__name__}: {e}")
 
 # ----------------------------
-# Main loop setup
+# Main loop
 # ----------------------------
 
 profiles_initial = get_profiles()
 sent_days = {email: None for email in profiles_initial.keys()}
-log.info(f"Initialized sent_days for {len(sent_days)} emails")
 
-
-# ----------------------------
-# Main notification loop
-# ----------------------------
+log.info(f"Initialized sent_days for {len(sent_days)} users")
 
 while True:
     profiles = get_profiles()
 
     for email, profile in profiles.items():
         try:
-            # --- SAFE TIMEZONE HANDLING ---
+            # Timezone handling
             tz_raw = profile.get("timezone")
-            if tz_raw in (None, ""):
+            try:
+                offset = int(tz_raw) if tz_raw else 0
+            except Exception:
                 offset = 0
-            else:
-                try:
-                    offset = int(tz_raw)
-                except (ValueError, TypeError):
-                    log.warning(f"Invalid timezone '{tz_raw}' for {email}, defaulting to 0")
-                    offset = 0
 
             current_time = calendar.get_curr_time(offset).strftime("%H:%M")
             today_short = calendar.get_today(offset)
             today_long = calendar.get_today(offset, True)
 
-            log.debug(
-                f"Profile {email}: method={profile.get('method')}, "
-                f"target_time={profile.get('time')}, "
-                f"current_time={current_time}, "
-                f"last_sent={sent_days.get(email)}, "
-                f"today_short={today_short}"
-            )
-
-            # Main condition for sending
+            # Should this profile get a message?
             if (
                 profile.get("time") == current_time
                 and today_short != sent_days.get(email)
             ):
                 entry = calendar.get_entry(today_short)
+
                 subject = f"Lead4Tomorrow Calendar {today_short['month']}/{today_short['day']}"
                 message = f"""We hope this message finds you well!
 
@@ -198,24 +200,19 @@ Lead4Tomorrow
 """
 
                 method = (profile.get("method") or "").lower()
-                log.info(f"Triggering notification for {email} via {method}")
 
                 if method == "email":
                     send_email(email, subject, message)
                 elif method == "push":
                     device_token = profile.get("device_token")
-                    if not device_token:
-                        log.error(f"No device_token for profile {email}, cannot send push.")
-                    else:
-                        send_push(device_token, subject, message)
+                    send_push(device_token, subject, message)
                 else:
-                    log.error(f"Unknown notification method '{profile.get('method')}' for {email}")
+                    log.error(f"Unknown method '{method}' for {email}")
 
                 sent_days[email] = today_short
-                log.info(f"Marked {email} as sent for {today_short}")
 
         except Exception as e:
-            log.error(f"Error processing profile {email}: {type(e).__name__}: {e}")
+            log.error(f"Error in notification loop for {email}: {type(e).__name__}: {e}")
 
     time.sleep(60)
 
