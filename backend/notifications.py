@@ -68,6 +68,10 @@ APNS_KEY_PATH = os.environ.get("APNS_KEY")   # path to .p8 file
 APNS_KEY_ID = os.environ.get("APNS_KEY_ID")          # your key ID env var
 APNS_TEAM_ID = os.environ.get("APNS_TEAM_ID")
 APNS_TOPIC = os.environ.get("APNS_BUNDLE_ID")
+log.info(f"APNS_KEY_PATH: {APNS_KEY_PATH}")
+log.info(f"APNS_KEY_ID: {APNS_KEY_ID}")
+log.info(f"APNS_TEAM_ID: {APNS_TEAM_ID}")
+log.info(f"APNS_TOPIC: {APNS_TOPIC}")
 
 apns_client = None
 if APNS_KEY_PATH and APNS_KEY_ID and APNS_TEAM_ID:
