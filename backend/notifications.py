@@ -170,14 +170,18 @@ def send_push(device_token, subject, body):
         log.debug(f"Push title: {subject}")
         log.debug(f"Push body length: {len(body)} characters")
         
+        # Create rich notification that's clickable and persistent
         payload = Payload(
             alert={
                 "title": subject,
-                "body": body
+                "body": body,
+                "sound": "default"
             },
-            sound="default",
             badge=1,
-            content_available=True
+            sound="default",
+            content_available=True,  # Allows app to process in background
+            mutable_content=True,     # Allows notification to be modified
+            category="CALENDAR_NOTIFICATION"  # Custom category for handling
         )
 
         apns_client.send_notification(
