@@ -48,7 +48,7 @@ from apns2.errors import (
 calendar = L4T_Calendar()
 
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.DEBUG,  # Changed to DEBUG for more detailed logs
     format="%(asctime)s [%(levelname)s] %(message)s"
 )
 log = logging.getLogger(__name__)
@@ -68,31 +68,36 @@ else:
 # APNs setup (Token-based)
 # ----------------------------
 
-APNS_KEY_PATH = os.environ.get("APNS_KEY")   # path to .p8 file
-APNS_KEY_ID = os.environ.get("APNS_KEY_ID")          # your key ID env var
+APNS_KEY_PATH = os.environ.get("APNS_KEY")
+APNS_KEY_ID = os.environ.get("APNS_KEY_ID")
 APNS_TEAM_ID = os.environ.get("APNS_TEAM_ID")
 APNS_TOPIC = os.environ.get("APNS_BUNDLE_ID")
+APNS_USE_SANDBOX = os.environ.get("APNS_USE_SANDBOX", "false").lower() == "true"
+
 log.info(f"APNS_KEY_PATH: {APNS_KEY_PATH}")
 log.info(f"APNS_KEY_ID: {APNS_KEY_ID}")
 log.info(f"APNS_TEAM_ID: {APNS_TEAM_ID}")
 log.info(f"APNS_TOPIC: {APNS_TOPIC}")
+log.info(f"APNS_USE_SANDBOX: {APNS_USE_SANDBOX}")
 
 apns_client = None
 if APNS_KEY_PATH and APNS_KEY_ID and APNS_TEAM_ID:
     try:
+        log.info("Attempting to initialize APNs client...")
         creds = TokenCredentials(
             auth_key_path=APNS_KEY_PATH,
             auth_key_id=APNS_KEY_ID,
             team_id=APNS_TEAM_ID
         )
+        log.debug("TokenCredentials created successfully")
 
         apns_client = APNsClient(
             credentials=creds,
-            use_sandbox=False,   # set True only if you are using iOS dev builds
+            use_sandbox=APNS_USE_SANDBOX,
             use_alternative_port=False
         )
 
-        log.info("APNs client initialized successfully.")
+        log.info(f"APNs client initialized successfully (sandbox={APNS_USE_SANDBOX})")
     except Exception as e:
         log.error(f"Error initializing APNs client: {type(e).__name__}: {e}")
 else:
@@ -104,6 +109,7 @@ else:
 
 def get_profiles():
     try:
+        log.debug("Fetching profiles from backend...")
         response = requests.get(
             "https://lead4tomorrow-mobile-app.onrender.com/show_profiles",
             timeout=10
@@ -111,6 +117,7 @@ def get_profiles():
         response.raise_for_status()
         profiles = response.json()
         log.info(f"Fetched {len(profiles)} profiles from backend")
+        log.debug(f"Profile emails: {list(profiles.keys())}")
         return profiles
     except Exception as e:
         log.error(f"Error fetching profiles: {type(e).__name__}: {e}")
@@ -126,6 +133,7 @@ def send_email(to_email, subject, body):
         return
 
     try:
+        log.info(f"Sending email to {to_email}...")
         with smtplib.SMTP("smtp.gmail.com", 587, timeout=60) as smtp:
             smtp.starttls()
             smtp.login(username, password)
@@ -139,10 +147,10 @@ def send_email(to_email, subject, body):
 
             smtp.sendmail(username, [to_email], msg)
 
-        log.info(f"Email sent to {to_email}")
+        log.info(f"✓ Email sent successfully to {to_email}")
 
     except Exception as e:
-        log.error(f"Email error for {to_email}: {type(e).__name__}: {e}")
+        log.error(f"✗ Email error for {to_email}: {type(e).__name__}: {e}")
 
 # ----------------------------
 # Push (APNs) sending
@@ -158,7 +166,19 @@ def send_push(device_token, subject, body):
         return
 
     try:
-        payload = Payload(alert={"title": subject, "body": body}, sound="default")
+        log.info(f"Sending push notification to device {device_token[:8]}...")
+        log.debug(f"Push title: {subject}")
+        log.debug(f"Push body length: {len(body)} characters")
+        
+        payload = Payload(
+            alert={
+                "title": subject,
+                "body": body
+            },
+            sound="default",
+            badge=1,
+            content_available=True
+        )
 
         apns_client.send_notification(
             device_token,
@@ -166,22 +186,22 @@ def send_push(device_token, subject, body):
             topic=APNS_TOPIC
         )
 
-        log.info(f"APNs push sent to {device_token[:8]}...")
+        log.info(f"✓ APNs push sent successfully to {device_token[:8]}...")
 
     except BadDeviceToken:
-        log.error(f"BadDeviceToken for token {device_token}")
+        log.error(f"✗ BadDeviceToken for token {device_token[:8]}...")
     except Unregistered:
-        log.error(f"Unregistered device {device_token}")
+        log.error(f"✗ Unregistered device {device_token[:8]}...")
     except PayloadTooLarge:
-        log.error("PayloadTooLarge error")
+        log.error("✗ PayloadTooLarge error")
     except TooManyRequests:
-        log.error("TooManyRequests (APNs rate limited)")
+        log.error("✗ TooManyRequests (APNs rate limited)")
     except ServiceUnavailable:
-        log.error("ServiceUnavailable (APNs down)")
+        log.error("✗ ServiceUnavailable (APNs down)")
     except InternalServerError:
-        log.error("InternalServerError from APNs")
+        log.error("✗ InternalServerError from APNs")
     except Exception as e:
-        log.error(f"Unexpected APNs error: {type(e).__name__}: {e}")
+        log.error(f"✗ Unexpected APNs error: {type(e).__name__}: {e}")
 
 # ----------------------------
 # Main loop
@@ -191,8 +211,14 @@ profiles_initial = get_profiles()
 sent_days = {email: None for email in profiles_initial.keys()}
 
 log.info(f"Initialized sent_days for {len(sent_days)} users")
+log.debug(f"Initial sent_days: {sent_days}")
+
+loop_count = 0
 
 while True:
+    loop_count += 1
+    log.debug(f"--- Loop iteration {loop_count} ---")
+    
     profiles = get_profiles()
 
     for email, profile in profiles.items():
@@ -207,16 +233,32 @@ while True:
             current_time = calendar.get_curr_time(offset).strftime("%H:%M")
             today_short = calendar.get_today(offset)
             today_long = calendar.get_today(offset, True)
+            
+            user_time = profile.get("time")
+            method = (profile.get("method") or "").lower()
+            
+            log.debug(f"Checking {email}: method={method}, user_time={user_time}, current_time={current_time}, offset={offset}")
+            
+            # Check if already sent today
+            if email in sent_days and sent_days[email] == today_short:
+                log.debug(f"  → Already sent today for {email}, skipping")
+                continue
+            
+            # Check if it's time to send
+            if user_time != current_time:
+                log.debug(f"  → Time mismatch for {email}: {user_time} != {current_time}")
+                continue
+            
+            # Time matches and not sent today!
+            log.info(f"⏰ TIME MATCH for {email}! Preparing to send notification...")
+            log.info(f"   Current time: {current_time}, User time: {user_time}")
+            log.info(f"   Date: {today_long['day']}, {today_long['month']} {today_short['day']}")
+            
+            entry = calendar.get_entry(today_short)
+            log.debug(f"   Calendar entry theme: {entry['theme']}")
 
-            # Should this profile get a message?
-            if (
-                profile.get("time") == current_time
-                and today_short != sent_days.get(email)
-            ):
-                entry = calendar.get_entry(today_short)
-
-                subject = f"Lead4Tomorrow Calendar {today_short['month']}/{today_short['day']}"
-                message = f"""We hope this message finds you well!
+            subject = f"Lead4Tomorrow Calendar {today_short['month']}/{today_short['day']}"
+            message = f"""We hope this message finds you well!
 
 {today_long["month"]} is {entry["theme"]}.
 Today is {today_long["day"]}, {today_long["month"]} {today_short["day"]}. {entry["entry"]}
@@ -225,19 +267,26 @@ Have a wonderful day,
 Lead4Tomorrow
 """
 
-                method = (profile.get("method") or "").lower()
+            log.info(f"📧 Sending via method: {method}")
 
-                if method == "email":
-                    send_email(email, subject, message)
-                elif method == "push":
-                    device_token = profile.get("device_token")
+            if method == "email":
+                send_email(email, subject, message)
+            elif method == "push":
+                device_token = profile.get("device_token")
+                if device_token:
+                    log.debug(f"   Device token: {device_token[:16]}...")
                     send_push(device_token, subject, message)
                 else:
-                    log.error(f"Unknown method '{method}' for {email}")
+                    log.error(f"✗ No device_token found for {email}")
+            else:
+                log.error(f"✗ Unknown method '{method}' for {email}")
 
-                sent_days[email] = today_short
+            # Mark as sent
+            sent_days[email] = today_short
+            log.info(f"✓ Marked {email} as sent for {today_short['month']}/{today_short['day']}")
 
         except Exception as e:
-            log.error(f"Error in notification loop for {email}: {type(e).__name__}: {e}")
+            log.error(f"✗ Error in notification loop for {email}: {type(e).__name__}: {e}")
 
+    log.debug(f"Sleeping for 60 seconds... (Loop {loop_count} complete)")
     time.sleep(60)
