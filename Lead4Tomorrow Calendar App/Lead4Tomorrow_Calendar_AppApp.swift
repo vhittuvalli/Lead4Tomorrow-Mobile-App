@@ -1,3 +1,7 @@
+// ============================================================
+// FILE 1: Lead4Tomorrow_Calendar_AppApp.swift
+// ============================================================
+
 //
 //  Lead4Tomorrow_Calendar_AppApp.swift
 //  Lead4Tomorrow Calendar App
@@ -16,24 +20,10 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil
     ) -> Bool {
 
+        // Set delegate but DON'T request permission here
+        // Permission is requested in PushNotificationManager when user enables it
         let center = UNUserNotificationCenter.current()
         center.delegate = self
-
-        center.requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
-            if let error = error {
-                print("Notification auth error: \(error)")
-                return
-            }
-
-            if granted {
-                print("✓ Notification permission granted")
-                DispatchQueue.main.async {
-                    UIApplication.shared.registerForRemoteNotifications()
-                }
-            } else {
-                print("✗ Notification permission not granted.")
-            }
-        }
 
         return true
     }
@@ -42,9 +32,13 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         _ application: UIApplication,
         didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
     ) {
+        // Update both UserDefaults and PushNotificationManager
         let tokenString = deviceToken.map { String(format: "%02x", $0) }.joined()
         print("✓ APNs device token: \(tokenString)")
         UserDefaults.standard.set(tokenString, forKey: "apnsDeviceToken")
+        
+        // Also update PushNotificationManager
+        PushNotificationManager.shared.updateDeviceToken(deviceToken)
     }
 
     func application(

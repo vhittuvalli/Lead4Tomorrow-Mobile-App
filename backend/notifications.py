@@ -166,9 +166,21 @@ def send_push(device_token, subject, body):
         return
 
     try:
-        log.info(f"Sending push notification to device {device_token[:8]}...")
-        log.debug(f"Push title: {subject}")
-        log.debug(f"Push body length: {len(body)} characters")
+        log.info(f"=" * 60)
+        log.info(f"📱 PREPARING PUSH NOTIFICATION")
+        log.info(f"=" * 60)
+        log.info(f"Target device: {device_token[:8]}...{device_token[-8:]}")
+        log.info(f"Full device token: {device_token}")
+        log.info(f"-" * 60)
+        log.info(f"NOTIFICATION TITLE:")
+        log.info(f"  {subject}")
+        log.info(f"-" * 60)
+        log.info(f"NOTIFICATION BODY ({len(body)} characters):")
+        log.info(f"{body}")
+        log.info(f"-" * 60)
+        log.info(f"APNs Topic: {APNS_TOPIC}")
+        log.info(f"Sandbox Mode: {APNS_USE_SANDBOX}")
+        log.info(f"=" * 60)
         
         # Create rich notification that's clickable and persistent
         payload = Payload(
@@ -183,6 +195,8 @@ def send_push(device_token, subject, body):
             mutable_content=True,     # Allows notification to be modified
             category="CALENDAR_NOTIFICATION"  # Custom category for handling
         )
+        
+        log.info("📤 Payload created, sending to APNs...")
 
         apns_client.send_notification(
             device_token,
@@ -190,22 +204,71 @@ def send_push(device_token, subject, body):
             topic=APNS_TOPIC
         )
 
-        log.info(f"✓ APNs push sent successfully to {device_token[:8]}...")
+        log.info(f"=" * 60)
+        log.info(f"✅ PUSH NOTIFICATION SENT SUCCESSFULLY!")
+        log.info(f"=" * 60)
+        log.info(f"Device: {device_token[:8]}...{device_token[-8:]}")
+        log.info(f"The notification should now:")
+        log.info(f"  ✓ Appear as a banner on the device")
+        log.info(f"  ✓ Play a sound")
+        log.info(f"  ✓ Show a badge on the app icon")
+        log.info(f"  ✓ Be stored in Notification Center history")
+        log.info(f"  ✓ Be clickable to open the app")
+        log.info(f"=" * 60)
 
     except BadDeviceToken:
-        log.error(f"✗ BadDeviceToken for token {device_token[:8]}...")
+        log.error(f"=" * 60)
+        log.error(f"✗ PUSH NOTIFICATION FAILED: BadDeviceToken")
+        log.error(f"=" * 60)
+        log.error(f"Device token {device_token[:8]}...{device_token[-8:]} is invalid")
+        log.error(f"This usually means:")
+        log.error(f"  - Token is from wrong environment (sandbox vs production)")
+        log.error(f"  - App was uninstalled and reinstalled")
+        log.error(f"  - Token format is incorrect")
+        log.error(f"=" * 60)
     except Unregistered:
-        log.error(f"✗ Unregistered device {device_token[:8]}...")
+        log.error(f"=" * 60)
+        log.error(f"✗ PUSH NOTIFICATION FAILED: Unregistered")
+        log.error(f"=" * 60)
+        log.error(f"Device {device_token[:8]}...{device_token[-8:]} is no longer registered")
+        log.error(f"This usually means the app was uninstalled")
+        log.error(f"=" * 60)
     except PayloadTooLarge:
-        log.error("✗ PayloadTooLarge error")
+        log.error(f"=" * 60)
+        log.error(f"✗ PUSH NOTIFICATION FAILED: PayloadTooLarge")
+        log.error(f"=" * 60)
+        log.error(f"The notification content is too large (max 4KB)")
+        log.error(f"Current body length: {len(body)} characters")
+        log.error(f"=" * 60)
     except TooManyRequests:
-        log.error("✗ TooManyRequests (APNs rate limited)")
+        log.error(f"=" * 60)
+        log.error(f"✗ PUSH NOTIFICATION FAILED: TooManyRequests")
+        log.error(f"=" * 60)
+        log.error(f"APNs rate limit exceeded - too many notifications sent too quickly")
+        log.error(f"=" * 60)
     except ServiceUnavailable:
-        log.error("✗ ServiceUnavailable (APNs down)")
+        log.error(f"=" * 60)
+        log.error(f"✗ PUSH NOTIFICATION FAILED: ServiceUnavailable")
+        log.error(f"=" * 60)
+        log.error(f"Apple's APNs servers are temporarily down")
+        log.error(f"Will retry on next loop iteration")
+        log.error(f"=" * 60)
     except InternalServerError:
-        log.error("✗ InternalServerError from APNs")
+        log.error(f"=" * 60)
+        log.error(f"✗ PUSH NOTIFICATION FAILED: InternalServerError")
+        log.error(f"=" * 60)
+        log.error(f"APNs internal server error - this is on Apple's side")
+        log.error(f"=" * 60)
     except Exception as e:
-        log.error(f"✗ Unexpected APNs error: {type(e).__name__}: {e}")
+        log.error(f"=" * 60)
+        log.error(f"✗ PUSH NOTIFICATION FAILED: Unexpected Error")
+        log.error(f"=" * 60)
+        log.error(f"Error type: {type(e).__name__}")
+        log.error(f"Error message: {e}")
+        log.error(f"Full device token: {device_token}")
+        log.error(f"=" * 60)
+        import traceback
+        log.error(traceback.format_exc())
 
 # ----------------------------
 # Main loop
@@ -254,12 +317,22 @@ while True:
                 continue
             
             # Time matches and not sent today!
-            log.info(f"⏰ TIME MATCH for {email}! Preparing to send notification...")
-            log.info(f"   Current time: {current_time}, User time: {user_time}")
-            log.info(f"   Date: {today_long['day']}, {today_long['month']} {today_short['day']}")
+            log.info(f"")
+            log.info(f"🎯" + "=" * 58 + "🎯")
+            log.info(f"⏰ TIME MATCH DETECTED!")
+            log.info(f"=" * 60)
+            log.info(f"User: {email}")
+            log.info(f"Method: {method.upper()}")
+            log.info(f"Current time: {current_time}")
+            log.info(f"User's scheduled time: {user_time}")
+            log.info(f"Date: {today_long['day']}, {today_long['month']} {today_short['day']}")
+            log.info(f"Timezone offset: {offset}")
+            log.info(f"=" * 60)
             
             entry = calendar.get_entry(today_short)
-            log.debug(f"   Calendar entry theme: {entry['theme']}")
+            log.info(f"📖 Calendar Entry Retrieved:")
+            log.info(f"  Theme: {entry['theme']}")
+            log.info(f"  Entry length: {len(entry['entry'])} characters")
 
             subject = f"Lead4Tomorrow Calendar {today_short['month']}/{today_short['day']}"
             message = f"""We hope this message finds you well!
@@ -271,23 +344,45 @@ Have a wonderful day,
 Lead4Tomorrow
 """
 
-            log.info(f"📧 Sending via method: {method}")
+            log.info(f"")
+            log.info(f"📧 DELIVERY METHOD: {method.upper()}")
+            log.info(f"=" * 60)
 
             if method == "email":
+                log.info(f"Sending EMAIL notification...")
                 send_email(email, subject, message)
             elif method == "push":
                 device_token = profile.get("device_token")
                 if device_token:
-                    log.debug(f"   Device token: {device_token[:16]}...")
+                    log.info(f"Sending PUSH notification...")
+                    log.debug(f"Device token (partial): {device_token[:16]}...{device_token[-16:]}")
                     send_push(device_token, subject, message)
                 else:
-                    log.error(f"✗ No device_token found for {email}")
+                    log.error(f"=" * 60)
+                    log.error(f"✗ CANNOT SEND PUSH: No device token found")
+                    log.error(f"=" * 60)
+                    log.error(f"User: {email}")
+                    log.error(f"Profile data: {profile}")
+                    log.error(f"The user may need to re-enable push notifications in the app")
+                    log.error(f"=" * 60)
             else:
-                log.error(f"✗ Unknown method '{method}' for {email}")
+                log.error(f"=" * 60)
+                log.error(f"✗ UNKNOWN NOTIFICATION METHOD")
+                log.error(f"=" * 60)
+                log.error(f"User: {email}")
+                log.error(f"Method received: '{method}'")
+                log.error(f"Valid methods are: 'email' or 'push'")
+                log.error(f"=" * 60)
 
             # Mark as sent
             sent_days[email] = today_short
-            log.info(f"✓ Marked {email} as sent for {today_short['month']}/{today_short['day']}")
+            log.info(f"")
+            log.info(f"✅ NOTIFICATION COMPLETE")
+            log.info(f"=" * 60)
+            log.info(f"User {email} marked as sent for {today_short['month']}/{today_short['day']}")
+            log.info(f"This user will not receive another notification until tomorrow")
+            log.info(f"=" * 60)
+            log.info(f"")
 
         except Exception as e:
             log.error(f"✗ Error in notification loop for {email}: {type(e).__name__}: {e}")
