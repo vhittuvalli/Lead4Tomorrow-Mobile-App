@@ -180,6 +180,7 @@ def send_push(device_token, subject, body):
         log.info(f"-" * 60)
         log.info(f"APNs Topic: {APNS_TOPIC}")
         log.info(f"Sandbox Mode: {APNS_USE_SANDBOX}")
+        log.info(f"Expiration: 24 hours from now ({int(time.time()) + 86400})")
         log.info(f"=" * 60)
         
         # Create rich notification that's clickable and persistent
@@ -198,10 +199,12 @@ def send_push(device_token, subject, body):
         
         log.info("📤 Payload created, sending to APNs...")
 
+        # Send with expiration time (notifications remain valid for 1 day)
         apns_client.send_notification(
             device_token,
             payload,
-            topic=APNS_TOPIC
+            topic=APNS_TOPIC,
+            expiration=int(time.time()) + 86400  # 24 hours from now
         )
 
         log.info(f"=" * 60)
