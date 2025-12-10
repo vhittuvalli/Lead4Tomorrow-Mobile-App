@@ -41,21 +41,67 @@ class L4T_Calendar:
     def get_entry(self, date: dict) -> dict:
         """Returns the entry for a given day with the theme of the month.
 
-        `date`: dictionary containing the specified date. Format: `{'month': '6', 'day': '24'}`.
+        This version adjusts for an off-by-one issue in the curriculum:
+        - For day 1: combines original day 1 and day 2 into a single entry.
+        - For day d >= 2: uses the entry stored under day (d + 1), clamped
+          to the last available day in that month.
         """
         try:
-            month = str(int(date["month"]))  # Remove leading zeroes, ensure it matches JSON keys
-            day = str(int(date["day"])) if date["day"] else None
+            month = str(int(date["month"]))  # normalize month key
+            raw_day = date.get("day")
+            day = int(raw_day) if raw_day else None
 
+            month_entries = self.entries[month]
+
+            # If only the theme is needed (no specific day)
             if day is None:
-                return {"theme": self.entries[month]["theme"]}
-            else:
+                return {"theme": month_entries["theme"]}
+
+            # Determine how many days this month has in the JSON
+            day_keys = [int(k) for k in month_entries.keys() if k != "theme"]
+            if not day_keys:
+                return {"theme": month_entries["theme"], "entry": ""}
+
+            max_day = max(day_keys)
+
+            # --- Special case: 1st of the month ---
+            # Combine original day 1 + day 2 into a single entry.
+            if day == 1:
+                first = month_entries.get("1", "")
+                second = month_entries.get("2", "")
+
+                parts = []
+                if first:
+                    parts.append(first.strip())
+                if second:
+                    parts.append(second.strip())
+
+                combined = "\n\n".join(p for p in parts if p)
+
                 return {
-                    "theme": self.entries[month]["theme"],
-                    "entry": self.entries[month][day],
+                    "theme": month_entries["theme"],
+                    "entry": combined,
                 }
+
+            # --- General case: shift everything else back by one day within the month ---
+            # Visible day d -> stored entry at day (d + 1), but never past max_day.
+            stored_day = day + 1
+            if stored_day > max_day:
+                stored_day = max_day
+
+            stored_key = str(stored_day)
+            entry_text = month_entries.get(stored_key, "")
+
+            return {
+                "theme": month_entries["theme"],
+                "entry": entry_text,
+            }
+
         except KeyError as err:
             log.critical(f"`get_entry` failed with input date={date}: {err}")
+            return {"theme": "", "entry": ""}
+        except Exception as err:
+            log.critical(f"`get_entry` unexpected error with date={date}: {err}")
             return {"theme": "", "entry": ""}
 
     def modify_entry(self, date: dict[str, str], new_entry: str) -> None:
