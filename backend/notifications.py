@@ -164,6 +164,29 @@ def send_push(device_token, subject, body):
     if not device_token:
         log.error("No device_token provided; cannot send push.")
         return
+    
+    # Validate device token format
+    if len(device_token) != 64:
+        log.error(f"=" * 60)
+        log.error(f"✗ INVALID DEVICE TOKEN LENGTH")
+        log.error(f"=" * 60)
+        log.error(f"Expected: 64 characters")
+        log.error(f"Received: {len(device_token)} characters")
+        log.error(f"Token: {device_token}")
+        log.error(f"=" * 60)
+        return
+    
+    # Check if token is hex
+    try:
+        int(device_token, 16)
+    except ValueError:
+        log.error(f"=" * 60)
+        log.error(f"✗ INVALID DEVICE TOKEN FORMAT")
+        log.error(f"=" * 60)
+        log.error(f"Token must be hexadecimal (0-9, a-f)")
+        log.error(f"Token: {device_token}")
+        log.error(f"=" * 60)
+        return
 
     try:
         log.info(f"=" * 60)
@@ -171,6 +194,7 @@ def send_push(device_token, subject, body):
         log.info(f"=" * 60)
         log.info(f"Target device: {device_token[:8]}...{device_token[-8:]}")
         log.info(f"Full device token: {device_token}")
+        log.info(f"Token length: {len(device_token)} (valid: 64)")
         log.info(f"-" * 60)
         log.info(f"NOTIFICATION TITLE:")
         log.info(f"  {subject}")
@@ -228,6 +252,7 @@ def send_push(device_token, subject, body):
         log.error(f"  - Token is from wrong environment (sandbox vs production)")
         log.error(f"  - App was uninstalled and reinstalled")
         log.error(f"  - Token format is incorrect")
+        log.error(f"Current environment: {'SANDBOX' if APNS_USE_SANDBOX else 'PRODUCTION'}")
         log.error(f"=" * 60)
     except Unregistered:
         log.error(f"=" * 60)
@@ -261,6 +286,25 @@ def send_push(device_token, subject, body):
         log.error(f"✗ PUSH NOTIFICATION FAILED: InternalServerError")
         log.error(f"=" * 60)
         log.error(f"APNs internal server error - this is on Apple's side")
+        log.error(f"=" * 60)
+    except ConnectionResetError as e:
+        log.error(f"=" * 60)
+        log.error(f"✗ PUSH NOTIFICATION FAILED: ConnectionResetError")
+        log.error(f"=" * 60)
+        log.error(f"APNs connection was reset - this usually means:")
+        log.error(f"  1. Device token is from WRONG ENVIRONMENT")
+        log.error(f"     - Current: {'SANDBOX' if APNS_USE_SANDBOX else 'PRODUCTION'}")
+        log.error(f"     - Token may be from: {'PRODUCTION' if APNS_USE_SANDBOX else 'SANDBOX'}")
+        log.error(f"  2. Device token is invalid or expired")
+        log.error(f"  3. App was uninstalled and token is stale")
+        log.error(f"")
+        log.error(f"TROUBLESHOOTING:")
+        log.error(f"  - Make sure app is installed via TestFlight (not Xcode)")
+        log.error(f"  - Reinstall app and re-register for notifications")
+        log.error(f"  - Verify device token is from current installation")
+        log.error(f"")
+        log.error(f"Full device token: {device_token}")
+        log.error(f"Error: {e}")
         log.error(f"=" * 60)
     except Exception as e:
         log.error(f"=" * 60)
@@ -336,15 +380,26 @@ while True:
             log.info(f"📖 Calendar Entry Retrieved:")
             log.info(f"  Theme: {entry['theme']}")
             log.info(f"  Entry length: {len(entry['entry'])} characters")
+            
+            # Determine day theme based on day of week
+            day_of_week = today_long.get('day', '')  # e.g., "Monday", "Tuesday"
+            day_themes = {
+                'Monday': 'Mindful Monday',
+                'Tuesday': 'Thoughtful Tuesday',
+                'Wednesday': "What's-Up Wednesday",
+                'Thursday': 'Thankful Thursday',
+                'Friday': 'Fast Fact Friday',
+                'Saturday': 'Self-Care Saturday',
+                'Sunday': 'Strong Family Sunday'
+            }
+            day_theme = day_themes.get(day_of_week, '')
+            log.info(f"  Day theme: {day_theme}")
 
             subject = f"Lead4Tomorrow Calendar {today_short['month']}/{today_short['day']}"
-            message = f"""We hope this message finds you well!
+            message = f"""{today_long["month"]} is {entry["theme"]}.
+Today is {day_theme}, {today_long["month"]} {today_short["day"]}. {entry["entry"]}
 
-{today_long["month"]} is {entry["theme"]}.
-Today is {today_long["day"]}, {today_long["month"]} {today_short["day"]}. {entry["entry"]}
-
-Have a wonderful day,
-Lead4Tomorrow
+Visit our website: https://lead4tomorrow.org/
 """
 
             log.info(f"")
