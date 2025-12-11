@@ -6,11 +6,12 @@ import logging
 log = logging.getLogger(__name__)
 utils.config_log()
 
+
 class L4T_Calendar:
     """Contains functions used for the calendar app back-end"""
 
-    # 👉 Point to the *shifted* JSON now
-    entries_filepath = utils.create_path("storage", "entries_shifted.json")
+    # ✅ Point to backend/storage/entries_shifted.json so it works on Render
+    entries_filepath = utils.create_path("backend", "storage", "entries_shifted.json")
 
     def __init__(self):
         # Load all calendar entries into a dictionary
