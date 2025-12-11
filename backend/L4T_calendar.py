@@ -9,11 +9,12 @@ utils.config_log()
 class L4T_Calendar:
     """Contains functions used for the calendar app back-end"""
 
-    entries_filepath = utils.create_path("storage", "entries.json")
+    # 👉 Point to the *shifted* JSON now
+    entries_filepath = utils.create_path("storage", "entries_shifted.json")
 
     def __init__(self):
         # Load all calendar entries into a dictionary
-        with open(self.entries_filepath, "r") as file:
+        with open(self.entries_filepath, "r", encoding="utf-8") as file:
             self.entries = dict(json.load(file))
 
     def get_curr_time(self, timezone: int = 0):
@@ -41,59 +42,27 @@ class L4T_Calendar:
     def get_entry(self, date: dict) -> dict:
         """Returns the entry for a given day with the theme of the month.
 
-        This version adjusts for an off-by-one issue in the curriculum:
-        - For day 1: combines original day 1 and day 2 into a single entry.
-        - For day d >= 2: uses the entry stored under day (d + 1), clamped
-          to the last available day in that month.
+        Assumes `entries_shifted.json` already contains the correct, shifted content.
+        No extra combining or shifting is done here.
         """
         try:
             month = str(int(date["month"]))  # normalize month key
             raw_day = date.get("day")
-            day = int(raw_day) if raw_day else None
+            day = str(int(raw_day)) if raw_day else None
 
-            month_entries = self.entries[month]
+            month_entries = self.entries.get(month)
+            if not month_entries:
+                return {"theme": "", "entry": ""}
 
-            # If only the theme is needed (no specific day)
+            # Only theme requested (no specific day)
             if day is None:
-                return {"theme": month_entries["theme"]}
+                return {"theme": month_entries.get("theme", "")}
 
-            # Determine how many days this month has in the JSON
-            day_keys = [int(k) for k in month_entries.keys() if k != "theme"]
-            if not day_keys:
-                return {"theme": month_entries["theme"], "entry": ""}
-
-            max_day = max(day_keys)
-
-            # --- Special case: 1st of the month ---
-            # Combine original day 1 + day 2 into a single entry.
-            if day == 1:
-                first = month_entries.get("1", "")
-                second = month_entries.get("2", "")
-
-                parts = []
-                if first:
-                    parts.append(first.strip())
-                if second:
-                    parts.append(second.strip())
-
-                combined = "\n\n".join(p for p in parts if p)
-
-                return {
-                    "theme": month_entries["theme"],
-                    "entry": combined,
-                }
-
-            # --- General case: shift everything else back by one day within the month ---
-            # Visible day d -> stored entry at day (d + 1), but never past max_day.
-            stored_day = day + 1
-            if stored_day > max_day:
-                stored_day = max_day
-
-            stored_key = str(stored_day)
-            entry_text = month_entries.get(stored_key, "")
+            # Direct lookup: shifted JSON is already preprocessed
+            entry_text = month_entries.get(day, "")
 
             return {
-                "theme": month_entries["theme"],
+                "theme": month_entries.get("theme", ""),
                 "entry": entry_text,
             }
 
@@ -105,7 +74,7 @@ class L4T_Calendar:
             return {"theme": "", "entry": ""}
 
     def modify_entry(self, date: dict[str, str], new_entry: str) -> None:
-        """Modifies an entry in the `entries.json` file.
+        """Modifies an entry in the `entries_shifted.json` file.
 
         `date`: dictionary containing the specified date. Format: `{'month': '6', 'day': '24'}`.
         `new_entry`: str containing the new entry.
@@ -113,14 +82,19 @@ class L4T_Calendar:
         month = str(int(date["month"]))
         day = str(int(date["day"])) if date["day"] else None
 
-        # Edit entry in dict
+        # Make sure the month exists
+        if month not in self.entries:
+            self.entries[month] = {"theme": ""}
+
         if day is None:
+            # Update theme only
             self.entries[month]["theme"] = new_entry
         else:
+            # Update specific day
             self.entries[month][day] = new_entry
 
         # Write to JSON file
-        with open(self.entries_filepath, "w") as file:
+        with open(self.entries_filepath, "w", encoding="utf-8") as file:
             file.write(json.dumps(self.entries, indent=4))
 
 

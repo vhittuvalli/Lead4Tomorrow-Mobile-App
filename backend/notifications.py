@@ -398,8 +398,6 @@ while True:
             subject = f"Lead4Tomorrow Calendar {today_short['month']}/{today_short['day']}"
             message = f"""{today_long["month"]} is {entry["theme"]}.
 Today is {day_theme}, {today_long["month"]} {today_short["day"]}. {entry["entry"]}
-
-Visit our website: https://lead4tomorrow.org/
 """
 
             log.info(f"")

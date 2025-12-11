@@ -26,11 +26,15 @@ def get_connection():
 
 
 # ----------------------------
-# Calendar entries from JSON
+# Calendar entries from shifted JSON
 # ----------------------------
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-ENTRIES_PATH = os.path.join(BASE_DIR, "storage", "entries.json")
-with open(ENTRIES_PATH, "r") as f:
+
+# Point directly to the shifted entries file
+ENTRIES_PATH = os.path.join(BASE_DIR, "storage", "entries_shifted.json")
+
+with open(ENTRIES_PATH, "r", encoding="utf-8") as f:
     calendar_entries = json.load(f)
 
 
@@ -41,21 +45,30 @@ def home():
 
 @app.route("/get_entry", methods=["GET"])
 def get_entry():
+    """
+    Returns theme + entry for a given month/day directly from entries_shifted.json.
+
+    Query params:
+      - month: "1".."12"
+      - day: "1".."31" (optional; if missing, returns only theme)
+    """
     month = request.args.get("month")
-    day = request.args.get("day")
+    day = request.args.get("day")  # may be None
+
+    if not month:
+        return jsonify({"error": "Missing month"}), 400
 
     try:
-        if not month:
-            return jsonify({"error": "Missing month"}), 400
-
         if month in calendar_entries:
             theme = calendar_entries[month].get("theme", "")
             entry = calendar_entries[month].get(day, "") if day else ""
             return jsonify({"theme": theme, "entry": entry}), 200
         else:
+            # Month not found, return empty but 200 (same behavior as before)
             return jsonify({"theme": "", "entry": ""}), 200
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        app.logger.exception(f"Error in /get_entry for month={month}, day={day}: {e}")
+        return jsonify({"error": "Internal server error"}), 500
 
 
 # ----------------------------
