@@ -11,8 +11,36 @@ struct SettingsRootView: View {
     var body: some View {
         Group {
             if isLoggedIn {
-                SettingsPageView(isLoggedIn: $isLoggedIn, loggedInEmail: $loggedInEmail)
+                VStack(spacing: 16) {
+
+                    // 🔹 App description / About section
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Welcome to Thriving Families")
+                            .font(AppTheme.heading(18, weight: .semibold))
+                            .foregroundColor(AppTheme.green)
+
+                        Text("""
+                        Developed by Lead for Tomorrow (L4T), Thriving Families supports nurturing families, thriving children, resilient communities, and healthy societies. This calendar app delivers a daily message of encouragement you can share with your children and family, grounded in L4T’s Family Hui positive parenting program.
+
+                        You can choose to receive messages via email or push notifications.
+                        """)
+                        .font(AppTheme.body(14))
+                        .foregroundColor(AppTheme.textSecondary)
+                    }
+                    .padding()
+                    .background(AppTheme.backgroundCard)
+                    .cornerRadius(12)
+
+                    // Existing settings page
+                    SettingsPageView(
+                        isLoggedIn: $isLoggedIn,
+                        loggedInEmail: $loggedInEmail
+                    )
                     .navigationTitle("Settings")
+                }
+                .padding()
+                .background(AppTheme.backgroundSoft.ignoresSafeArea())
+
             } else {
                 VStack(spacing: 16) {
                     // Auth mode switch
