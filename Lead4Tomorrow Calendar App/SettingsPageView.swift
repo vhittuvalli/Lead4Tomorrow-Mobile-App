@@ -1,6 +1,7 @@
 // FILE: SettingsPageView.swift
 import SwiftUI
 import UserNotifications
+import UIKit
 
 struct SettingsPageView: View {
     @Binding var isLoggedIn: Bool
@@ -86,6 +87,12 @@ struct SettingsPageView: View {
                         if !enabled {
                             UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
                             resetFields()
+                        } else {
+                            // If user enables notifications while "Push" is selected,
+                            // request permission + register with APNs.
+                            if preferredMethod == "Push" {
+                                PushNotificationManager.shared.registerForPushNotifications(for: loggedInEmail)
+                            }
                         }
                     }
 
@@ -98,6 +105,13 @@ struct SettingsPageView: View {
                     .font(AppTheme.body(16))
                     .pickerStyle(.segmented)
                     .tint(AppTheme.accent)
+                    .onChange(of: preferredMethod) { method in
+                        // If user switches to Push while notifications are enabled,
+                        // request permission + register with APNs.
+                        if method == "Push" {
+                            PushNotificationManager.shared.registerForPushNotifications(for: loggedInEmail)
+                        }
+                    }
 
                     if isProfileCollapsed {
                         // Collapsed summary
@@ -217,15 +231,19 @@ struct SettingsPageView: View {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
-        let deviceToken = UserDefaults.standard.string(forKey: "apnsDeviceToken") ?? ""
+        let deviceToken = (UserDefaults.standard.string(forKey: "apnsDeviceToken") ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
 
-        let body: [String: Any] = [
+        // Build body and ONLY include device_token if non-empty
+        var body: [String: Any] = [
             "email": loggedInEmail,
             "time": formattedTime(notificationTime),
             "timezone": "\(utcOffset(for: selectedTimezone))",
-            "method": preferredMethod.lowercased(),
-            "device_token": deviceToken
+            "method": preferredMethod.lowercased()
         ]
+
+        if !deviceToken.isEmpty {
+            body["device_token"] = deviceToken
+        }
 
         request.httpBody = try? JSONSerialization.data(withJSONObject: body)
 
@@ -266,6 +284,11 @@ struct SettingsPageView: View {
 
                 self.notificationTime = parseTimeString(profile["time"] as? String ?? "09:00")
                 self.isNotificationsEnabled = true
+
+                // If profile says push, we can attempt registration on load as well
+                if self.preferredMethod == "Push" {
+                    PushNotificationManager.shared.registerForPushNotifications(for: loggedInEmail)
+                }
             }
         }.resume()
     }

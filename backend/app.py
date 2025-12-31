@@ -123,6 +123,7 @@ def login():
 def update_profile():
     """
     Upserts notification preferences and (optionally) device_token for a profile.
+
     Expected JSON:
     {
       "email": "...",
@@ -131,6 +132,10 @@ def update_profile():
       "time": "09:00",         # HH:MM
       "device_token": "..."    # optional
     }
+
+    Important behavior:
+    - device_token is ONLY updated if provided and non-empty.
+      This prevents wiping a valid token when the client posts settings without a token.
     """
     data = request.json or {}
     email = data.get("email")
@@ -152,8 +157,42 @@ def update_profile():
                 method = EXCLUDED.method,
                 timezone = EXCLUDED.timezone,
                 time = EXCLUDED.time,
-                device_token = EXCLUDED.device_token
+                device_token = COALESCE(NULLIF(EXCLUDED.device_token, ''), profiles.device_token)
         """, (email, method, timezone, time_val, device_token))
+        cur.close()
+
+    return jsonify({"status": "success"}), 200
+
+
+@app.route("/register_device", methods=["POST"])
+def register_device():
+    """
+    Sets/updates device_token for an existing profile.
+    Expected JSON:
+    {
+      "email": "...",
+      "device_token": "64-char hex token"
+    }
+
+    This is called by the app when APNs returns a token.
+    """
+    data = request.json or {}
+    email = data.get("email")
+    device_token = (data.get("device_token") or "").strip()
+
+    if not email:
+        return jsonify({"error": "email required"}), 400
+    if not device_token:
+        return jsonify({"error": "device_token required"}), 400
+
+    with get_connection() as conn:
+        cur = conn.cursor()
+        cur.execute("""
+            INSERT INTO profiles (email, device_token)
+            VALUES (%s, %s)
+            ON CONFLICT (email)
+            DO UPDATE SET device_token = EXCLUDED.device_token
+        """, (email, device_token))
         cur.close()
 
     return jsonify({"status": "success"}), 200
